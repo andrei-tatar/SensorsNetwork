@@ -13,7 +13,7 @@ void sendPacket(const uint8_t *data, uint8_t size);
 #define FRAME_RECEIVEPACKET 0x93
 
 void setup() {
-    Serial.begin(57600);
+    Serial.begin(250000);
 }
 
 void loop() {

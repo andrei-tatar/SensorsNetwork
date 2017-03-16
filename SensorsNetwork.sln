@@ -3,11 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sensors", "Sensors\Sensors.vcxproj", "{39A85B80-755C-4E1E-9928-29D342FE9E00}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Temperature", "Temperature\Temperature.vcxproj", "{C5F80730-F44F-4478-BDAE-6634EFC2CA88}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SerialBridge", "SerialBridge\SerialBridge.vcxproj", "{76B48F1F-7035-414E-9E10-5653A61BA345}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sensor", "Sensor\Sensor.vcxproj", "{C5F80730-F44F-4478-BDAE-6634EFC2CA88}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,18 +13,14 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{39A85B80-755C-4E1E-9928-29D342FE9E00}.Debug|x86.ActiveCfg = Debug|Win32
-		{39A85B80-755C-4E1E-9928-29D342FE9E00}.Debug|x86.Build.0 = Debug|Win32
-		{39A85B80-755C-4E1E-9928-29D342FE9E00}.Release|x86.ActiveCfg = Release|Win32
-		{39A85B80-755C-4E1E-9928-29D342FE9E00}.Release|x86.Build.0 = Release|Win32
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Debug|x86.ActiveCfg = Debug|Win32
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Debug|x86.Build.0 = Debug|Win32
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Release|x86.ActiveCfg = Release|Win32
-		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Release|x86.Build.0 = Release|Win32
 		{76B48F1F-7035-414E-9E10-5653A61BA345}.Debug|x86.ActiveCfg = Debug|Win32
 		{76B48F1F-7035-414E-9E10-5653A61BA345}.Debug|x86.Build.0 = Debug|Win32
 		{76B48F1F-7035-414E-9E10-5653A61BA345}.Release|x86.ActiveCfg = Release|Win32
 		{76B48F1F-7035-414E-9E10-5653A61BA345}.Release|x86.Build.0 = Release|Win32
+		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Debug|x86.ActiveCfg = Debug|Win32
+		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Debug|x86.Build.0 = Debug|Win32
+		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Release|x86.ActiveCfg = Release|Win32
+		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

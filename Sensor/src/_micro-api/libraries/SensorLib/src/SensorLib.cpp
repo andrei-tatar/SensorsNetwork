@@ -1,4 +1,4 @@
-#include "SensorsLib.h"
+#include "SensorLib.h"
 #include <AESLib.h>
 
 Sensor::Sensor(const uint8_t *txAddress, const uint8_t *ownAddress, uint8_t channel, const uint8_t* key, const uint8_t* iv) :
@@ -56,8 +56,8 @@ void Sensor::onPacketReceived(uint8_t *msg, uint8_t length) {
     case MessageType::Data:
         /*Serial.print("received data: ");
         for (uint8_t i=0; i<length; i++) {
-            Serial.print(msg[i+5], HEX);
-            Serial.print(':');
+        Serial.print(msg[i+5], HEX);
+        Serial.print(':');
         }
         Serial.println();*/
         msg[0] = MessageType::Ack;

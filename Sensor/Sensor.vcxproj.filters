@@ -15,19 +15,19 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Sensors.ino" />
-    <None Include="src\_micro-api\libraries\SensorsLib\library.properties" />
+    <None Include="Sensor.ino" />
+    <None Include="src\_micro-api\libraries\SensorLib\library.properties" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\_micro-api\libraries\SensorsLib\src\SensorsLib.cpp">
+    <ClCompile Include="src\_micro-api\libraries\SensorLib\src\SensorLib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\_micro-api\libraries\SensorsLib\src\SensorsLib.h">
+    <ClInclude Include="src\_micro-api\libraries\SensorLib\src\SensorLib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="__vm\.Sensors.vsarduino.h">
+    <ClInclude Include="__vm\.Sensor.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
