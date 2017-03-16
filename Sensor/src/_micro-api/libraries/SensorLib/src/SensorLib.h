@@ -16,6 +16,11 @@ private:
     RF24 _radio;
     const uint8_t *_txAddress, *_ownAddress, *_key, *_iv;
     uint8_t _channel;
+    uint16_t _nonce;
+    bool _nonceRequestPending;
+    bool _nonceRequestSuccess;
+    bool _ackPending;
+    bool _ackSuccess;
 
     void sendPacket(uint8_t *data, uint8_t length);
     void onPacketReceived(uint8_t *data, uint8_t length);
@@ -26,7 +31,7 @@ public:
 
     bool begin();
 
-    void send(void* data, uint8_t length);
+    bool send(void* data, uint8_t length);
     void update();
 };
 

@@ -20,11 +20,6 @@ bool Sensor::begin() {
     return true;
 }
 
-void Sensor::send(void * data, uint8_t length)
-{
-    //TODO...
-}
-
 #define CHKSUM_INIT     0x1021
 
 void updateChecksum(uint16_t *checksum, uint8_t data) {
@@ -41,30 +36,136 @@ typedef enum {
     Ack
 } MessageType;
 
+typedef struct {
+    uint8_t type;
+    uint16_t rcvdNonce;
+    uint16_t sentNonce;
+    uint32_t time;
+} Awaiter;
+
+#define SEND_INTERVAL   50
+#define RETRIES         20
+#define TIMEOUT         (RETRIES * SEND_INTERVAL)
+#define AWAITERS        5
+
 void Sensor::onPacketReceived(uint8_t *msg, uint8_t length) {
     uint16_t nonce;
-    switch (msg[0]) {
-    case MessageType::RequestNonce:
+    static Awaiter awaiters[AWAITERS];
+    uint32_t now = millis();
+
+    uint16_t receivedNonce = msg[1] << 8 | msg[2];
+
+    if (msg[0] == MessageType::Nonce) {
+        uint16_t sentNonce = msg[3] << 8 | msg[4];
+        if (_nonceRequestPending && _nonce == sentNonce) {
+            _nonceRequestSuccess = true;
+            _nonce = receivedNonce;
+        }
+    }
+    else if (msg[0] == MessageType::Ack) {
+        if (_nonce == receivedNonce) {
+            _ackSuccess = true;
+        }
+    }
+    else if (msg[0] == MessageType::RequestNonce) {
+        Awaiter *free = NULL, *found = NULL;
+        for (uint8_t i = 0; i < AWAITERS; i++) {
+            if (now - awaiters[i].time > TIMEOUT) {
+                free = &awaiters[i];
+                continue;
+            }
+            if (awaiters[i].rcvdNonce == receivedNonce && awaiters[i].type == MessageType::RequestNonce) {
+                found = &awaiters[i];
+                break;
+            }
+        }
+
+        if (!free) return;
+
+        uint16_t nonceToSend;
+        if (found) {
+            nonceToSend = found->sentNonce;
+        }
+        else {
+            nonceToSend = getNonce();
+            free->rcvdNonce = receivedNonce;
+            free->sentNonce = nonceToSend;
+            free->time = now;
+            free->type = MessageType::RequestNonce;
+        }
+
         msg[0] = MessageType::Nonce;
         msg[3] = msg[1];
         msg[4] = msg[2];
-        nonce = getNonce();
-        msg[1] = nonce >> 8;
-        msg[2] = nonce;
+        msg[1] = nonceToSend >> 8;
+        msg[2] = nonceToSend;
         sendPacket(msg, 5);
-        break;
-    case MessageType::Data:
-        /*Serial.print("received data: ");
-        for (uint8_t i=0; i<length; i++) {
-        Serial.print(msg[i+5], HEX);
-        Serial.print(':');
-        }
-        Serial.println();*/
-        msg[0] = MessageType::Ack;
-        sendPacket(msg, 3);
-        break;
     }
+    else if (msg[0] == MessageType::Data) {
+        uint16_t sentNonce = msg[3] << 8 | msg[4];
+        for (uint8_t i = 0; i < AWAITERS; i++) {
+            if (now - awaiters[i].time < TIMEOUT &&
+                awaiters[i].sentNonce == sentNonce &&
+                awaiters[i].type == MessageType::RequestNonce) {
+                //TODO: invoke a packet received handler
+                msg[0] = MessageType::Ack;
+                sendPacket(msg, 3);
+                return;
+            }
+        }
+    }
+}
 
+bool Sensor::send(void * data, uint8_t length)
+{
+    uint8_t msg[32];
+
+    _nonce = getNonce();
+    msg[0] = MessageType::RequestNonce;
+    msg[1] = _nonce >> 8;
+    msg[2] = _nonce;
+    _nonceRequestPending = true;
+    _nonceRequestSuccess = false;
+
+    uint8_t retries = RETRIES;
+    uint32_t send = millis();
+    while (retries) {
+        uint32_t now = millis();
+        if (now >= send) {
+            sendPacket(msg, 3);
+            send = now + SEND_INTERVAL;
+            retries--;
+        }
+        update();
+        if (_nonceRequestSuccess) break;
+    }
+    _nonceRequestPending = false;
+    if (!_nonceRequestSuccess) return false;
+
+    msg[0] = MessageType::Data;
+    msg[3] = _nonce >> 8;
+    msg[4] = _nonce;
+    _nonce = getNonce();
+    msg[1] = _nonce >> 8;
+    msg[2] = _nonce;
+    memcpy(&msg[5], data, length);
+
+    _ackPending = true;
+    _ackSuccess = false;
+    retries = RETRIES;
+    send = millis();
+    while (retries) {
+        uint32_t now = millis();
+        if (now >= send) {
+            sendPacket(msg, length + 5);
+            send = now + SEND_INTERVAL;
+            retries--;
+        }
+        update();
+        if (_ackSuccess) break;
+    }
+    _ackPending = false;
+    return _ackSuccess;
 }
 
 void Sensor::sendPacket(uint8_t *data, uint8_t length) {
@@ -97,7 +198,7 @@ void Sensor::update() {
         static uint8_t buffer[32];
         _radio.read(buffer, sizeof(buffer));
         uint8_t length = _radio.getDynamicPayloadSize();
-        if (length % 16 != 0) return;
+        if (length % 16 != 0) continue;
 
         aes128_cbc_dec(_key, _iv, buffer, length);
 
