@@ -12,8 +12,8 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C5F80730-F44F-4478-BDAE-6634EFC2CA88}</ProjectGuid>
-    <RootNamespace>SensorsNetwork</RootNamespace>
-    <ProjectName>SensorsNetwork</ProjectName>
+    <RootNamespace>Temperature</RootNamespace>
+    <ProjectName>Temperature</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -47,10 +47,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
-      <IgnoreStandardIncludePath>true</IgnoreStandardIncludePath>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\Sensors\src\_micro-api\libraries\SensorsLib\src;$(ProjectDir)..\..\..\Users\andrei\Documents\Arduino\libraries\RF24;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\libraries\SPI\src;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\libraries;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\libraries;$(ProjectDir)..\..\..\Users\andrei\Documents\Arduino\libraries;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\cores\arduino;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\variants\eightanaloginputs;$(ProjectDir)..\Temperature;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\avr\include\;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\avr\include\avr\;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\lib\gcc\avr\4.8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(ProjectDir)__vm\.Temperature.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
+      <PreprocessorDefinitions>__AVR_ATmega328p__;__AVR_ATmega328P__;_VMDEBUG=1;F_CPU=8000000L;ARDUINO=10801;ARDUINO_AVR_PRO;ARDUINO_ARCH_AVR;__cplusplus=201103L;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -59,10 +59,14 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\Sensors\src\_micro-api\libraries\SensorsLib\src;$(ProjectDir)..\..\..\Users\andrei\Documents\Arduino\libraries\RF24;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\libraries\SPI\src;$(ProjectDir)..\..\..\Users\andrei\Documents\Arduino\libraries\AESLib-master;$(ProjectDir)..\..\..\Users\andrei\Documents\Arduino\libraries\RF24\utility;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\libraries;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\libraries;$(ProjectDir)..\..\..\Users\andrei\Documents\Arduino\libraries;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\cores\arduino;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\variants\eightanaloginputs;$(ProjectDir)..\Temperature;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\avr\include\;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\avr\include\avr\;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\lib\gcc\avr\4.8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(ProjectDir)__vm\.Temperature.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <PreprocessorDefinitions>__AVR_ATmega328p__;__AVR_ATmega328P__;F_CPU=8000000L;ARDUINO=10801;ARDUINO_AVR_PRO;ARDUINO_ARCH_AVR;__cplusplus=201103L;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -77,9 +81,17 @@
     <DebuggerFlavor>VisualMicroDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="SensorsNetwork.ino">
+    <None Include="Temperature.ino">
       <FileType>CppCode</FileType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Sensors\Sensors.vcxproj">
+      <Project>{39a85b80-755c-4e1e-9928-29d342fe9e00}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="__vm\.Temperature.vsarduino.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
