@@ -1,6 +1,5 @@
 #include <RF24.h>
 #include <nRF24L01.h>
-#include <PacketSerial.h>
 
 RF24 radio(2, 3);
 static bool radioConfigured = false;

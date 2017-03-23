@@ -1,9 +1,9 @@
 #include "SensorLib.h"
-#include <AESLib.h>
 
-Sensor::Sensor(const uint8_t *txAddress, const uint8_t *ownAddress, uint8_t channel, const uint8_t* key, const uint8_t* iv) :
-    _radio(2, 3), _txAddress(txAddress), _ownAddress(ownAddress), _channel(channel), _key(key), _iv(iv) {
+const uint8_t iv[16];
 
+Sensor::Sensor(const uint64_t txAddress, const uint64_t ownAddress, uint8_t channel, const uint8_t* key) :
+    _radio(2, 3), _txAddress(txAddress), _ownAddress(ownAddress), _channel(channel), _key(key), _handler(NULL) {
     //TODO: set a random seed
 }
 
@@ -107,7 +107,9 @@ void Sensor::onPacketReceived(uint8_t *msg, uint8_t length) {
             if (now - awaiters[i].time < TIMEOUT &&
                 awaiters[i].sentNonce == sentNonce &&
                 awaiters[i].type == MessageType::RequestNonce) {
-                //TODO: invoke a packet received handler
+                if (_handler != NULL) {
+                    _handler(&msg[5], length - 5);
+                }
                 msg[0] = MessageType::Ack;
                 sendPacket(msg, 3);
                 return;
@@ -118,6 +120,7 @@ void Sensor::onPacketReceived(uint8_t *msg, uint8_t length) {
 
 bool Sensor::send(void * data, uint8_t length)
 {
+    if (length > 24) return;
     uint8_t msg[32];
 
     _nonce = getNonce();
@@ -169,12 +172,9 @@ bool Sensor::send(void * data, uint8_t length)
 }
 
 void Sensor::sendPacket(uint8_t *data, uint8_t length) {
-    if (length > 29) {
-        Serial.println("send_packet: packet size too large");
-        return;
-    }
+    if (length > 29) return;
 
-    static uint8_t txBuffer[32];
+    uint8_t txBuffer[32];
     txBuffer[2] = length;
     memcpy(&txBuffer[3], data, length);
     length = length <= 13 ? 16 : 32;
@@ -183,7 +183,7 @@ void Sensor::sendPacket(uint8_t *data, uint8_t length) {
         updateChecksum(&chksum, txBuffer[i]);
     txBuffer[0] = chksum >> 8;
     txBuffer[1] = chksum;
-    aes128_cbc_enc(_key, _iv, txBuffer, length);
+    aes128_cbc_enc(_key, iv, txBuffer, length);
     _radio.stopListening();
     _radio.write(txBuffer, length);
     _radio.startListening();
@@ -195,12 +195,12 @@ uint16_t Sensor::getNonce() {
 
 void Sensor::update() {
     while (_radio.available()) {
-        static uint8_t buffer[32];
+        uint8_t buffer[32];
         _radio.read(buffer, sizeof(buffer));
         uint8_t length = _radio.getDynamicPayloadSize();
         if (length % 16 != 0) continue;
 
-        aes128_cbc_dec(_key, _iv, buffer, length);
+        aes128_cbc_dec(_key, iv, buffer, length);
 
         uint16_t chksum = CHKSUM_INIT;
         for (uint8_t i = 2; i < length; i++) updateChecksum(&chksum, buffer[i]);
@@ -209,4 +209,8 @@ void Sensor::update() {
             onPacketReceived(&buffer[3], buffer[2]);
         }
     }
+}
+
+void Sensor::onMessage(DataReceivedHandler handler) {
+    _handler = handler;
 }
