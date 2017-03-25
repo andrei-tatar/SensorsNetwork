@@ -214,3 +214,39 @@ void Sensor::update() {
 void Sensor::onMessage(DataReceivedHandler handler) {
     _handler = handler;
 }
+
+void Sensor::powerDown(uint16_t seconds) {
+    _radio.stopListening();
+    _radio.powerDown();
+
+    while (seconds > 8) {
+        LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
+        seconds -= 8;
+    }
+
+    while (seconds > 4) {
+        LowPower.powerDown(SLEEP_4S, ADC_OFF, BOD_OFF);
+        seconds -= 4;
+    }
+
+    while (seconds > 2) {
+        LowPower.powerDown(SLEEP_2S, ADC_OFF, BOD_OFF);
+        seconds -= 2;
+    }
+
+    while (seconds > 0) {
+        LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_ON);
+        seconds -= 1;
+    }
+    _radio.powerUp();
+    _radio.openWritingPipe(_txAddress);
+    _radio.startListening();
+}
+
+uint16_t Sensor::readVoltage() {
+    ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+    delay(2);
+    ADCSRA |= _BV(ADSC);
+    while (bit_is_set(ADCSRA, ADSC));
+    return 1126400 / ADC;
+}

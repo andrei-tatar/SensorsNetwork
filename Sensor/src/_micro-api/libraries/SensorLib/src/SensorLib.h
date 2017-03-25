@@ -4,6 +4,7 @@
 #include "RF24.h"
 #include "nRF24L01.h"
 #include "AESLib.h"
+#include "LowPower.h"
 
 typedef void(*DataReceivedHandler)(uint8_t* data, uint8_t length);
 
@@ -33,6 +34,8 @@ public:
     bool send(void* data, uint8_t length);
     void update();
     void onMessage(DataReceivedHandler handler);
+    void powerDown(uint16_t seconds);
+    uint16_t readVoltage();
 };
 
 #endif
