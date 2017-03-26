@@ -238,6 +238,7 @@ void Sensor::powerDown(uint16_t seconds) {
         LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_ON);
         seconds -= 1;
     }
+
     _radio.powerUp();
     _radio.openWritingPipe(_txAddress);
     _radio.startListening();

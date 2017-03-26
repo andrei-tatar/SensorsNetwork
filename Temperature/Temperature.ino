@@ -10,30 +10,26 @@ Sensor sensor(GW_ADDR, ADDR, CHANNEL, key);
 Tcn temp;
 
 void setup() {
-    sensor.begin();
     temp.begin();
+    sensor.begin();
 }
 
 void loop() {
-    static uint8_t msg[6];
-    static uint8_t sendVoltage = 0;
+    static uint8_t msg[6] = { 'T', 0, 0, 'V', 0, 0 };
+    static uint8_t readVoltage = 0;
 
     uint16_t temperature = temp.read();
-    uint8_t size = 3;
 
-    msg[0] = 'T';
     msg[1] = temperature >> 8;
     msg[2] = temperature;
 
-    if (sendVoltage-- == 0) {
-        sendVoltage = 12;
+    if (readVoltage-- == 0) {
+        readVoltage = 11;
         uint16_t voltage = sensor.readVoltage();
-        msg[3] = 'V';
         msg[4] = voltage >> 8;
         msg[5] = voltage;
-        size += 3;
     }
 
-    sensor.send(msg, size);
+    sensor.send(msg, sizeof(msg));
     sensor.powerDown(300); //5 min
 }
