@@ -52,14 +52,13 @@ void onPacketReceived(uint8_t *data, uint8_t size) {
     switch (*data)
     {
     case FRAME_CONFIGURE:
-        if (!radio.begin()) break;
+        if (data[7] > MAX_KEYS || !radio.begin()) break;
         radio.setChannel(data[6]);
         radio.setAutoAck(false);
         radio.enableDynamicPayloads();
         radio.openReadingPipe(1, &data[1]);
         radio.startListening();
         radioConfigured = true;
-        if (data[7] > MAX_KEYS) break;
         key_count = data[7];
         memcpy(keys, &data[8], key_count * 16);
 
