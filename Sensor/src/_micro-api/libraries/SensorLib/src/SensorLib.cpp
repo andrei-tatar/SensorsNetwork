@@ -41,6 +41,7 @@ typedef struct {
     uint16_t rcvdNonce;
     uint16_t sentNonce;
     uint32_t time;
+    bool processed;
 } Awaiter;
 
 #define SEND_INTERVAL   50
@@ -92,6 +93,7 @@ void Sensor::onPacketReceived(uint8_t *msg, uint8_t length) {
             free->sentNonce = nonceToSend;
             free->time = now;
             free->type = MessageType::RequestNonce;
+            free->processed = false;
         }
 
         msg[0] = MessageType::Nonce;
@@ -107,8 +109,9 @@ void Sensor::onPacketReceived(uint8_t *msg, uint8_t length) {
             if (now - awaiters[i].time < TIMEOUT &&
                 awaiters[i].sentNonce == sentNonce &&
                 awaiters[i].type == MessageType::RequestNonce) {
-                if (_handler != NULL) {
+                if (_handler != NULL && !awaiters[i].processed) {
                     _handler(&msg[5], length - 5);
+                    awaiters[i].processed = true;
                 }
                 msg[0] = MessageType::Ack;
                 sendPacket(msg, 3);

@@ -17,9 +17,11 @@ void loop() {
     static uint32_t send;
 
     if (millis() > send) {
-        send = millis() + 2000;
+        send = millis() + 1000;
+        static uint32_t value = 0;
         uint32_t start = millis();
-        bool success = sensor.send("test", 4);
+        bool success = sensor.send(&value, 4);
+        if (success) value++;
         uint32_t time = millis() - start;
         Serial.print(success ? "sent - " : "not sent - ");
         Serial.println(time);
