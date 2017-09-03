@@ -1,84 +1,264 @@
 #include <RF24.h>
-#include <nRF24L01.h>
 #include <AESLib.h>
 
-#define MAX_KEYS    10
+#define MAX_SENSORS     10
+#define ADDRESS_GW      0xAD5AB7192FUL
+#define RADIO_CHANNEL   0x54
+#define RETRY_COUNT     10
+#define RETRY_DELAY     50
+
+#define LIGHT_ON        100
+#define PIN_RX_LED      6
+#define PIN_TX_LED      7
+
+typedef struct {
+    uint32_t nextSendNonce;
+    uint32_t oldReceiveNonce;
+    uint32_t nextReceiveNonce;
+    uint8_t send[32];
+    uint8_t sendSize;
+    uint8_t key[16];
+    uint32_t lastSendTime;
+    uint8_t retries;
+} Sensor;
+
+Sensor sensors[MAX_SENSORS];
+uint8_t sensorsCount = 0;
+const uint8_t iv[16];
+
+uint32_t turnOffRx, turnOffTx;
 
 RF24 radio(2, 3);
-static bool radioConfigured = false;
-static uint8_t keys[MAX_KEYS][16];
-static uint8_t key_count;
-const uint8_t iv[16];
-void sendPacket(const uint8_t *data, uint8_t size);
+void sendSerialPacket(const uint8_t *data, uint8_t size);
+void sendData(Sensor* sensor);
+void processReceivedPacket(Sensor *sensor, uint8_t sensorId, const uint8_t *data, uint8_t length);
+void sendResponse(Sensor* sensor, uint32_t nonce, bool ack);
+void sendPacket(Sensor *sensor, const uint8_t *data, uint8_t length);
 
-#define FRAME_CONFIGURE     0x90
-#define FRAME_CONFIGURED    0x91
-#define FRAME_SENDPACKET    0x92
-#define FRAME_RECEIVEPACKET 0x93
+#define FRAME_CONFIGURE             0x90
+#define FRAME_CONFIGURED            0x91
+#define FRAME_SENDPACKET            0x92
+#define FRAME_RECEIVEPACKET         0x93
+#define FRAME_PACKETSENT            0x94
+
+#define FRAME_ERR_BUSY              0x70
+#define FRAME_ERR_INVALID_SIZE      0x71
+#define FRAME_ERR_INVALID_ID        0x72
+#define FRAME_ERR_TIMEOUT           0x73
+
+#define MSG_DATA                    0x01
+#define MSG_ACK                     0x02
+#define MSG_NACK                    0x03
 
 void setup() {
     Serial.begin(57600);
+    pinMode(PIN_RX_LED, OUTPUT);
+    pinMode(PIN_TX_LED, OUTPUT);
+}
+
+void ledRx() {
+    turnOffRx = millis() + LIGHT_ON;
+    digitalWrite(PIN_RX_LED, HIGH);
+}
+
+void ledTx() {
+    turnOffTx = millis() + LIGHT_ON;
+    digitalWrite(PIN_TX_LED, HIGH);
 }
 
 void loop() {
-    updatePacket();
-    while (radioConfigured && radio.available()) {
+    updateSerialPacket();
+
+    uint32_t now = millis();
+    while (sensorsCount && radio.available()) {
         static uint8_t rxBuffer[34];
         uint8_t length = radio.getDynamicPayloadSize();
         radio.read(&rxBuffer[2], length);
-        
-        for (uint8_t keyIndex = 0; keyIndex < key_count; keyIndex++) {
+        if (length % 16 != 0) continue;
+
+        for (uint8_t sensorId = 0; sensorId < sensorsCount; sensorId++) {
             uint8_t decrypted[32];
             memcpy(decrypted, &rxBuffer[2], length);
-            aes128_cbc_dec(keys[keyIndex], iv, decrypted, length);
-            uint8_t dataLength = decrypted[2];
-            if (dataLength > 29) continue;
 
-            uint16_t chksum = getChecksum(&decrypted[2], length - 2);
-            if ((chksum >> 8) == decrypted[0] && 
-                (chksum & 0xFF) == decrypted[1]) {
-                rxBuffer[0] = FRAME_RECEIVEPACKET;
-                rxBuffer[1] = keyIndex;
-                
-                memcpy(&rxBuffer[2], &decrypted[3], dataLength);
-                sendPacket(rxBuffer, dataLength + 2);
-                break;
+            Sensor* sensor = &sensors[sensorId];
+            aes128_cbc_dec(sensor->key, iv, decrypted, length);
+
+            uint8_t msgLength = decrypted[2];
+            if (msgLength > 29) continue;
+
+            uint16_t chksum = getChecksum(&decrypted[2], msgLength + 1);
+            uint16_t msgChksum = decrypted[0] | (decrypted[1] << 8);
+            if (msgChksum != chksum) continue;
+            ledRx();
+            processReceivedPacket(sensor, sensorId, &decrypted[3], msgLength);
+            break;
+        }
+    }
+
+    for (uint8_t sensorId = 0; sensorId < sensorsCount; sensorId++) {
+        Sensor* sensor = &sensors[sensorId];
+        if (sensor->retries && (now - sensor->lastSendTime) >= RETRY_DELAY) {
+            sensor->retries--;
+            if (sensor->retries == 0) {
+                uint8_t aux[2] = { FRAME_ERR_TIMEOUT, sensorId };
+                sendSerialPacket(aux, 2);
+            }
+            else {
+                sendData(sensor);
             }
         }
     }
+
+    if (now > turnOffRx) digitalWrite(PIN_RX_LED, LOW);
+    if (now > turnOffTx) digitalWrite(PIN_TX_LED, LOW);
 }
 
-void onPacketReceived(uint8_t *data, uint8_t size) {
+void processReceivedPacket(Sensor *sensor, uint8_t sensorId, const uint8_t *data, uint8_t length) {
+    uint8_t serialPacket[34];
+    uint32_t nonce;
+
+    length--;
+    switch (*data++) {
+    case MSG_ACK:
+        nonce = *(uint32_t*)data;
+        if (length != 8 || nonce != sensor->nextSendNonce) break;
+
+        sensor->nextSendNonce = *(uint32_t*)&data[4];
+        sensor->retries = 0;
+
+        serialPacket[0] = FRAME_PACKETSENT;
+        serialPacket[1] = sensorId;
+        sendSerialPacket(serialPacket, 2);
+        break;
+
+    case MSG_NACK:
+        nonce = *(uint32_t*)data;
+        if (length != 8 || nonce != sensor->nextSendNonce) break;
+
+        sensor->nextSendNonce = *(uint32_t*)&data[4];
+        sendData(sensor);
+        break;
+
+    case MSG_DATA:
+        nonce = *(uint32_t*)data;
+        length -= 4;
+        if (nonce == sensor->oldReceiveNonce) {
+            sendResponse(sensor, nonce, true);
+            break;
+        }
+
+        if (nonce != sensor->nextReceiveNonce) {
+            sendResponse(sensor, nonce, false);
+            break;
+        }
+
+        sensor->oldReceiveNonce = sensor->nextReceiveNonce;
+        do { sensor->nextReceiveNonce = random(); } while (sensor->nextReceiveNonce == sensor->oldReceiveNonce);
+        sendResponse(sensor, nonce, true);
+
+        serialPacket[0] = FRAME_RECEIVEPACKET;
+        serialPacket[1] = sensorId;
+        memcpy(&serialPacket[2], &data[4], length);
+        sendSerialPacket(serialPacket, length + 2);
+        break;
+    }
+}
+
+void sendPacket(Sensor *sensor, const uint8_t *data, uint8_t length) {
+    uint8_t msg[32];
+    msg[2] = length;
+    memcpy(&msg[3], data, length);
+    uint16_t chksum = getChecksum(&msg[2], length + 1);
+    msg[0] = chksum;
+    msg[1] = chksum >> 8;
+
+    length = length + 3 <= 16 ? 16 : 32;
+    aes128_cbc_enc(sensor->key, iv, msg, length);
+
+    radio.openWritingPipe(sensor->key);
+    radio.stopListening();
+    radio.write(msg, length);
+    radio.startListening();
+    ledTx();
+}
+
+void sendResponse(Sensor* sensor, uint32_t nonce, bool ack) {
+    uint8_t data[9];
+    data[0] = ack ? MSG_ACK : MSG_NACK;
+    *((uint32_t*)&data[1]) = nonce;
+    *((uint32_t*)&data[5]) = sensor->nextReceiveNonce;
+    sendPacket(sensor, data, 9);
+}
+
+void sendData(Sensor* sensor) {
+    uint8_t data[29];
+    data[0] = MSG_DATA;
+    *((uint32_t*)&data[1]) = sensor->nextSendNonce;
+    memcpy(&data[5], sensor->send, sensor->sendSize);
+    sendPacket(sensor, data, sensor->sendSize + 5);
+    sensor->lastSendTime = millis();
+}
+
+void onSerialPacketReceived(uint8_t *data, uint8_t size) {
     switch (*data)
     {
     case FRAME_CONFIGURE:
-        if (data[7] > MAX_KEYS || !radio.begin()) break;
-        radio.setChannel(data[6]);
+        if (data[1] > MAX_SENSORS || !radio.begin()) break;
+        sensorsCount = data[1];
+        if (sensorsCount * 16 + 2 != size) break;
+
+        radio.setChannel(RADIO_CHANNEL);
         radio.setAutoAck(false);
         radio.enableDynamicPayloads();
-        radio.openReadingPipe(1, &data[1]);
+        radio.openReadingPipe(1, ADDRESS_GW);
         radio.startListening();
-        radioConfigured = true;
-        key_count = data[7];
-        memcpy(keys, &data[8], key_count * 16);
+
+        for (uint8_t sensorId = 0; sensorId < sensorsCount; sensorId++) {
+            Sensor *sensor = &sensors[sensorId];
+            const uint8_t *key = &data[2 + sensorId * 16];
+            memcpy(sensor->key, key, 16);
+
+            sensor->retries = 0;
+            sensor->oldReceiveNonce = random();
+            sensor->nextReceiveNonce = random();
+        }
 
         data[0] = FRAME_CONFIGURED;
-        sendPacket(data, 1);
+        sendSerialPacket(data, 1);
         break;
 
     case FRAME_SENDPACKET:
-        if (!radioConfigured) break;
-        radio.openWritingPipe(&data[2]);
-        radio.stopListening();
-        
-        size = size - 7 <= 16 ? 16 : 32;
-        aes128_cbc_enc(keys[data[1]], iv, &data[7], size);
-        radio.write(&data[7], size);
-        radio.startListening();
+        if (!sensorsCount) break;
+        uint8_t sensorId;
+        sensorId = data[1];
+        size -= 2;
+        if (size > 24) {
+            data[0] = FRAME_ERR_INVALID_SIZE;
+            sendSerialPacket(data, 1);
+            break;
+        }
+        if (sensorId >= sensorsCount) {
+            data[0] = FRAME_ERR_INVALID_ID;
+            sendSerialPacket(data, 1);
+            break;
+        }
+
+        Sensor *sensor;
+        sensor = &sensors[sensorId];
+        if (sensor->retries) {
+            data[0] = FRAME_ERR_BUSY;
+            sendSerialPacket(data, 1);
+            break;
+        }
+
+        sensor->sendSize = size;
+        memcpy(sensor->send, &data[2], size);
+        sensor->retries = RETRY_COUNT;
+        sendData(sensor);
         break;
 
     default:
-        sendPacket(data, size);
+        sendSerialPacket(data, size);
         break;
     }
 }
@@ -87,7 +267,7 @@ void onPacketReceived(uint8_t *data, uint8_t size) {
 #define FRAME_HEADER_2  0x5B
 #define CHKSUM_INIT     0x1021
 
-void sendPacket(const uint8_t *data, uint8_t size)
+void sendSerialPacket(const uint8_t *data, uint8_t size)
 {
     Serial.write(FRAME_HEADER_1);
     Serial.write(FRAME_HEADER_2);
@@ -124,7 +304,7 @@ static uint16_t getChecksum(uint8_t *data, uint8_t length) {
 #define RX_STATUS_CHK1  4
 #define RX_STATUS_CHK2  5
 
-void updatePacket() {
+void updateSerialPacket() {
     static uint8_t status = RX_STATUS_IDLE;
     static uint8_t rxBuffer[200];
     static uint8_t rxSize, rxOffset;
@@ -157,7 +337,7 @@ void updatePacket() {
             break;
         case RX_STATUS_CHK2:
             rxChksum |= data;
-            if (chksum == rxChksum) onPacketReceived(rxBuffer, rxSize);
+            if (chksum == rxChksum) onSerialPacketReceived(rxBuffer, rxSize);
             status = RX_STATUS_IDLE;
             break;
 

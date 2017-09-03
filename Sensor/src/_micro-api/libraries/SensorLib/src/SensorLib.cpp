@@ -2,20 +2,30 @@
 
 const uint8_t iv[16];
 
-Sensor::Sensor(const uint64_t txAddress, const uint64_t ownAddress, uint8_t channel, const uint8_t* key) :
-    _radio(2, 3), _txAddress(txAddress), _ownAddress(ownAddress), _channel(channel), _key(key), _handler(NULL) {
-    //TODO: set a random seed
+#define ADDRESS_GW      0xAD5AB7192FUL
+#define RADIO_CHANNEL   0x54
+#define RETRY_COUNT     10
+#define RETRY_DELAY     50
+
+#define MSG_DATA        0x01
+#define MSG_ACK         0x02
+#define MSG_NACK        0x03
+
+Sensor::Sensor(const uint8_t* key, uint8_t cepin, uint8_t cspin) :
+    _radio(cepin, cspin), _key(key), _handler(NULL) {
+    _oldReceiveNonce = random();
+    _nextReceiveNonce = random();
 }
 
 bool Sensor::begin() {
     if (!_radio.begin())
         return false;
 
-    _radio.setChannel(_channel);
+    _radio.setChannel(RADIO_CHANNEL);
     _radio.setAutoAck(false);
     _radio.enableDynamicPayloads();
-    _radio.openWritingPipe(_txAddress);
-    _radio.openReadingPipe(1, _ownAddress);
+    _radio.openWritingPipe(ADDRESS_GW);
+    _radio.openReadingPipe(1, _key);
     _radio.startListening();
     return true;
 }
@@ -29,149 +39,72 @@ void updateChecksum(uint16_t *checksum, uint8_t data) {
     *checksum ^= data;
 }
 
-typedef enum {
-    RequestNonce = 0x34,
-    Nonce,
-    Data,
-    Ack
-} MessageType;
+void Sensor::onPacketReceived(uint8_t *data, uint8_t length) {
+    uint32_t nonce;
+    length--;
+    switch (*data++) {
+    case MSG_ACK:
+        nonce = *(uint32_t*)data;
+        if (length != 8 || nonce != _nextSendNonce) break;
 
-typedef struct {
-    uint8_t type;
-    uint16_t rcvdNonce;
-    uint16_t sentNonce;
-    uint32_t time;
-    bool processed;
-} Awaiter;
+        _nextSendNonce = *(uint32_t*)&data[4];
+        _retries = 0;
 
-#define SEND_INTERVAL   50
-#define RETRIES         20
-#define TIMEOUT         (RETRIES * SEND_INTERVAL)
-#define AWAITERS        5
+        _sendOk = true;
+        break;
 
-void Sensor::onPacketReceived(uint8_t *msg, uint8_t length) {
-    uint16_t nonce;
-    static Awaiter awaiters[AWAITERS];
-    uint32_t now = millis();
+    case MSG_NACK:
+        nonce = *(uint32_t*)data;
+        if (length != 8 || nonce != _nextSendNonce) break;
 
-    uint16_t receivedNonce = msg[1] << 8 | msg[2];
+        _nextSendNonce = *(uint32_t*)&data[4];
+        sendData();
+        break;
 
-    if (msg[0] == MessageType::Nonce) {
-        uint16_t sentNonce = msg[3] << 8 | msg[4];
-        if (_nonceRequestPending && _nonce == sentNonce) {
-            _nonceRequestSuccess = true;
-            _nonce = receivedNonce;
-        }
-    }
-    else if (msg[0] == MessageType::Ack) {
-        if (_nonce == receivedNonce) {
-            _ackSuccess = true;
-        }
-    }
-    else if (msg[0] == MessageType::RequestNonce) {
-        Awaiter *free = NULL, *found = NULL;
-        for (uint8_t i = 0; i < AWAITERS; i++) {
-            if (now - awaiters[i].time > TIMEOUT) {
-                free = &awaiters[i];
-                continue;
-            }
-            if (awaiters[i].rcvdNonce == receivedNonce && awaiters[i].type == MessageType::RequestNonce) {
-                found = &awaiters[i];
-                break;
-            }
+    case MSG_DATA:
+        nonce = *(uint32_t*)data;
+        if (nonce == _oldReceiveNonce) {
+            sendResponse(nonce, true);
+            break;
         }
 
-        if (!free) return;
-
-        uint16_t nonceToSend;
-        if (found) {
-            nonceToSend = found->sentNonce;
-        }
-        else {
-            nonceToSend = getNonce();
-            free->rcvdNonce = receivedNonce;
-            free->sentNonce = nonceToSend;
-            free->time = now;
-            free->type = MessageType::RequestNonce;
-            free->processed = false;
+        if (nonce != _nextReceiveNonce) {
+            sendResponse(nonce, false);
+            break;
         }
 
-        msg[0] = MessageType::Nonce;
-        msg[3] = msg[1];
-        msg[4] = msg[2];
-        msg[1] = nonceToSend >> 8;
-        msg[2] = nonceToSend;
-        sendPacket(msg, 5);
-    }
-    else if (msg[0] == MessageType::Data) {
-        uint16_t sentNonce = msg[3] << 8 | msg[4];
-        for (uint8_t i = 0; i < AWAITERS; i++) {
-            if (now - awaiters[i].time < TIMEOUT &&
-                awaiters[i].sentNonce == sentNonce &&
-                awaiters[i].type == MessageType::RequestNonce) {
-                if (_handler != NULL && !awaiters[i].processed) {
-                    _handler(&msg[5], length - 5);
-                    awaiters[i].processed = true;
-                }
-                msg[0] = MessageType::Ack;
-                sendPacket(msg, 3);
-                return;
-            }
-        }
+        data += 4;
+        length -= 4;
+
+        _oldReceiveNonce = _nextReceiveNonce;
+        do { _nextReceiveNonce = random(); } while (_nextReceiveNonce == _oldReceiveNonce);
+        sendResponse(nonce, true);
+
+        if (_handler) _handler(data, length);
+        break;
     }
 }
 
 bool Sensor::send(void * data, uint8_t length)
 {
-    if (length > 24) return;
-    uint8_t msg[32];
+    if (length > 24) return false;
 
-    _nonce = getNonce();
-    msg[0] = MessageType::RequestNonce;
-    msg[1] = _nonce >> 8;
-    msg[2] = _nonce;
-    _nonceRequestPending = true;
-    _nonceRequestSuccess = false;
+    memcpy(_send, data, length);
+    _sendSize = length;
+    _retries = RETRY_COUNT;
 
-    uint8_t retries = RETRIES;
-    uint32_t send = millis();
-    while (retries) {
-        uint32_t now = millis();
-        if (now >= send) {
-            sendPacket(msg, 3);
-            send = now + SEND_INTERVAL;
-            retries--;
-        }
+    sendData();
+    return true;
+}
+
+bool Sensor::sendAndWait(void* data, uint8_t length) {
+    if (!send(data, length)) return false;
+
+    while (_retries) {
         update();
-        if (_nonceRequestSuccess) break;
     }
-    _nonceRequestPending = false;
-    if (!_nonceRequestSuccess) return false;
 
-    msg[0] = MessageType::Data;
-    msg[3] = _nonce >> 8;
-    msg[4] = _nonce;
-    _nonce = getNonce();
-    msg[1] = _nonce >> 8;
-    msg[2] = _nonce;
-    memcpy(&msg[5], data, length);
-
-    _ackPending = true;
-    _ackSuccess = false;
-    retries = RETRIES;
-    send = millis();
-    while (retries) {
-        uint32_t now = millis();
-        if (now >= send) {
-            sendPacket(msg, length + 5);
-            send = now + SEND_INTERVAL;
-            retries--;
-        }
-        update();
-        if (_ackSuccess) break;
-    }
-    _ackPending = false;
-    return _ackSuccess;
+    return _sendOk;
 }
 
 void Sensor::sendPacket(uint8_t *data, uint8_t length) {
@@ -180,20 +113,17 @@ void Sensor::sendPacket(uint8_t *data, uint8_t length) {
     uint8_t txBuffer[32];
     txBuffer[2] = length;
     memcpy(&txBuffer[3], data, length);
-    length = length <= 13 ? 16 : 32;
     uint16_t chksum = CHKSUM_INIT;
-    for (uint8_t i = 2; i < length; i++)
-        updateChecksum(&chksum, txBuffer[i]);
-    txBuffer[0] = chksum >> 8;
-    txBuffer[1] = chksum;
+    for (uint8_t i = 0; i < length + 1; i++)
+        updateChecksum(&chksum, txBuffer[2 + i]);
+    txBuffer[0] = chksum;
+    txBuffer[1] = chksum >> 8;
+    
+    length = length <= 13 ? 16 : 32;
     aes128_cbc_enc(_key, iv, txBuffer, length);
     _radio.stopListening();
     _radio.write(txBuffer, length);
     _radio.startListening();
-}
-
-uint16_t Sensor::getNonce() {
-    return rand() << 8 | rand();
 }
 
 void Sensor::update() {
@@ -204,14 +134,44 @@ void Sensor::update() {
         if (length % 16 != 0) continue;
 
         aes128_cbc_dec(_key, iv, buffer, length);
+        uint8_t dataLength = buffer[2];
+        if (dataLength > 29) continue;
 
         uint16_t chksum = CHKSUM_INIT;
-        for (uint8_t i = 2; i < length; i++) updateChecksum(&chksum, buffer[i]);
-        uint16_t msgChksum = buffer[0] << 8 | buffer[1];
+        for (uint8_t i = 0; i < dataLength + 1; i++) updateChecksum(&chksum, buffer[i+2]);
+        uint16_t msgChksum = buffer[0] | buffer[1] << 8;
         if (chksum == msgChksum) {
-            onPacketReceived(&buffer[3], buffer[2]);
+            onPacketReceived(&buffer[3], dataLength);
         }
     }
+
+    uint32_t now;
+    if (_retries && (now = millis()) - _lastSendTime >= RETRY_DELAY) {
+        _retries--;
+        if (_retries == 0) {
+            _sendOk = false;
+        }
+        else {
+            sendData();
+        }
+    }
+}
+
+void Sensor::sendResponse(uint32_t nonce, bool ack) {
+    uint8_t data[9];
+    data[0] = ack ? MSG_ACK : MSG_NACK;
+    *((uint32_t*)&data[1]) = nonce;
+    *((uint32_t*)&data[5]) = _nextReceiveNonce;
+    sendPacket(data, 9);
+}
+
+void Sensor::sendData() {
+    uint8_t data[29];
+    data[0] = MSG_DATA;
+    *((uint32_t*)&data[1]) = _nextSendNonce;
+    memcpy(&data[5], _send, _sendSize);
+    sendPacket(data, _sendSize + 5);
+    _lastSendTime = millis();
 }
 
 void Sensor::onMessage(DataReceivedHandler handler) {
@@ -243,7 +203,7 @@ void Sensor::powerDown(uint16_t seconds) {
     }
 
     _radio.powerUp();
-    _radio.openWritingPipe(_txAddress);
+    _radio.openWritingPipe(ADDRESS_GW);
     _radio.startListening();
 }
 
