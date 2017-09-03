@@ -9,7 +9,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sensor", "Sensor\Sensor.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Temperature", "Temperature\Temperature.vcxproj", "{D8127287-1FC1-4F44-BEA0-F05B07A950E7}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LightDimmer", "..\..\Users\andrei\Documents\Arduino\LightDimmer\LightDimmer.vcxproj", "{7367C4F9-D5A3-4961-840C-65DFE6DA3EBB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LightDimmer", "LightDimmer\LightDimmer.vcxproj", "{7367C4F9-D5A3-4961-840C-65DFE6DA3EBB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

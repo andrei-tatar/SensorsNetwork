@@ -63,7 +63,7 @@ ISR(TIMER1_COMPA_vect) {
     }
 
     PORTD |= 1 << PIN_TRIAC;
-    _delay_us(10);
+    _delay_us(50);
     PORTD &= ~(1 << PIN_TRIAC);
 }
 
