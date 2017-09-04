@@ -8,18 +8,29 @@ Sensor sensor(key, 9, 10);
 #define PIN_TRIAC   6
 #define PIN_ZERO    2
 
-#define MAX_BRIGHT  90
-#define MIN_BRIGHT  20
+#define CMD_SET         1
+#define CMD_GET         2
+#define CMD_SET_MODE    3
 
-#define CMD_SET     1
-#define CMD_GET     2
+#define MODE_MAN_DIMMER     0x01    //enable manual dimming
+#define MODE_DISABLE_MAN    0x02    //disable manual control
+
+#define RSP_INIT    1
+#define RSP_STATE   2
 
 static volatile uint16_t timerDelay = 0xFFFF;
 static volatile uint8_t brightness;
 static volatile bool next = false;
+static volatile uint8_t mode = 0;
+static volatile uint8_t modeNoDimmerBrightness = 100;
 
 void updateLed() {
-    digitalWrite(PIN_LED, brightness >= MIN_BRIGHT ? HIGH : LOW);
+    digitalWrite(PIN_LED, brightness ? HIGH : LOW);
+}
+
+void sendState() {
+    uint8_t send[2] = { RSP_STATE, brightness };
+    sensor.send(&send, 2);
 }
 
 void onData(const uint8_t* data, uint8_t length) {
@@ -28,8 +39,11 @@ void onData(const uint8_t* data, uint8_t length) {
         updateLed();
     }
     if (data[0] == CMD_GET && length == 1) {
-        uint8_t send = brightness;
-        sensor.send(&send, 1);
+        sendState();
+    }
+    if (data[0] == CMD_SET_MODE && length == 3) {
+        mode = data[1];
+        modeNoDimmerBrightness = data[2];
     }
 }
 
@@ -53,6 +67,9 @@ void setup() {
     TCCR1B = 1 << CS11; //(start 8 prescaler)
 
     sei();
+
+    uint8_t announce = RSP_INIT;
+    sensor.send(&announce, 1);
 }
 
 ISR(TIMER1_COMPA_vect) {
@@ -74,30 +91,26 @@ ISR(INT0_vect) {
     next = true;
 }
 
-static const uint8_t powerToTicks[] PROGMEM = {
-    100, 97, 95, 93, 90, 89, 88, 86, 85, 84, 83, 82, 81, 80, 79, 78, 78, 77, 76, 76, 75, 
-    73, 73, 72, 71, 71, 70, 69, 69, 69, 68, 67, 67, 66, 65, 65, 64, 63, 63, 63, 62, 61, 61, 
-    60, 60, 59, 59, 58, 57, 56, 56, 56, 55, 54, 54, 53, 52, 52, 52, 51, 50, 50, 49, 48, 48, 
-    48, 47, 46, 46, 45, 44, 44, 43, 42, 41, 41, 40, 39, 39, 38, 37, 37, 36, 35, 34, 33, 33, 
-    31, 31, 29, 29, 27, 26, 24, 23, 21, 19, 16, 13, 0 };
+static const uint8_t powerToTicks[100] PROGMEM = { 
+    75, 72, 71, 70, 69, 68, 68, 67, 66, 66, 65, 65, 64, 64, 63, 63, 62, 62, 62, 61,
+    61, 60, 60, 60, 59, 59, 58, 58, 58, 57, 57, 57, 56, 56, 56, 55, 55, 55, 54, 54, 
+    54, 53, 53, 53, 52, 52, 52, 51, 51, 51, 50, 50, 50, 49, 49, 49, 48, 48, 48, 47, 
+    47, 47, 46, 46, 46, 45, 45, 45, 44, 44, 44, 43, 43, 43, 42, 42, 41, 41, 41, 40, 
+    40, 39, 39, 39, 38, 38, 37, 37, 36, 36, 35, 35, 34, 34, 33, 33, 32, 31, 30, 29 
+};
 
 void handleRamp(uint32_t now) {
     static uint32_t nextChange;
     if (now >= nextChange) {
-        nextChange = now + 20;
+        nextChange = now + 15;
 
         static uint8_t current = 0;
         if (current != brightness) {
             if (current < brightness) current++;
             else if (current > brightness) current--;
 
-            uint16_t nextDelay;
-            if (current < MIN_BRIGHT)
-                nextDelay = 0xFFFF;
-            else if (current >= MAX_BRIGHT)
-                nextDelay = pgm_read_byte(&powerToTicks[MAX_BRIGHT]) * 100;
-            else
-                nextDelay = pgm_read_byte(&powerToTicks[current]) * 100;
+            uint16_t nextDelay = current 
+                ? pgm_read_byte(&powerToTicks[current - 1]) * 100 : 0xFFFF;
 
             if (nextDelay != timerDelay) {
                 cli();
@@ -117,43 +130,66 @@ bool handleTouchEvents(uint32_t now) {
     static bool levelChanged;
     static uint8_t lastBrightness = 100;
     if (touchState != lastTouchState) {
-        if (touchState) {
-            nextManualChange = now + 300;
-            levelChanged = false;
-            if (!brightness) increaseLevel = true;
+        lastTouchState = touchState;
+        if (mode & MODE_DISABLE_MAN) {
+            if (touchState)
+                analogWrite(PIN_LED, 128);
+            else
+                updateLed();
+            return false;
         }
-        else {
-            if (!levelChanged) {
-                if (brightness) {
-                    lastBrightness = brightness;
-                    brightness = 0;
-                    increaseLevel = true;
-                }
-                else {
-                    brightness = lastBrightness;
-                    increaseLevel = false;
-                }
+
+        if (touchState) {
+            if (mode & MODE_MAN_DIMMER) {
+                nextManualChange = now + 300;
+                levelChanged = false;
+                if (!brightness) increaseLevel = true;
             }
             else {
-                increaseLevel = !increaseLevel;
+                if (brightness != modeNoDimmerBrightness) {
+                    brightness = modeNoDimmerBrightness;
+                }
+                else {
+                    brightness = 0;
+                }
+                updateLed();
+            }
+        }
+        else {
+            if (mode & MODE_MAN_DIMMER) {
+                if (!levelChanged) {
+                    if (brightness) {
+                        lastBrightness = brightness;
+                        brightness = 0;
+                        increaseLevel = true;
+                    }
+                    else {
+                        brightness = lastBrightness;
+                        increaseLevel = false;
+                    }
+                }
+                else {
+                    increaseLevel = !increaseLevel;
+                }
             }
             updateLed();
         }
-        lastTouchState = touchState;
     }
     else if (touchState) {
-        if (now >= nextManualChange) {
-            levelChanged = true;
-            nextManualChange = now + 30;
-            analogWrite(PIN_LED, 128);
-            if (increaseLevel) {
-                if (brightness < 100) brightness++;
+        if (mode & MODE_MAN_DIMMER) {
+            if (now >= nextManualChange) {
+                levelChanged = true;
+                nextManualChange = now + 30;
+                analogWrite(PIN_LED, 128);
+                if (increaseLevel) {
+                    if (brightness < 100) brightness++;
+                }
+                else {
+                    if (brightness > 1) brightness--;
+                }
             }
-            else {
-                if (brightness > MIN_BRIGHT) brightness--;
-            }
+            return true;
         }
-        return true;
     }
     return false;
 }
@@ -168,7 +204,7 @@ void loop() {
         static uint8_t lastSentBrightness;
         if (brightness != lastSentBrightness) {
             lastSentBrightness = brightness;
-            sensor.send(&lastSentBrightness, 1);
+            sendState();
         }
     }
 
