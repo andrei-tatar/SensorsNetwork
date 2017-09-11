@@ -11,6 +11,7 @@ Sensor sensor(key, 9, 10);
 #define CMD_SET         1
 #define CMD_GET         2
 #define CMD_SET_MODE    3
+#define CMD_SET_LED     4
 
 #define MODE_MAN_DIMMER     0x01    //enable manual dimming
 #define MODE_DISABLE_MAN    0x02    //disable manual control
@@ -24,8 +25,10 @@ static volatile bool next = false;
 static volatile uint8_t mode = 0;
 static volatile uint8_t modeNoDimmerBrightness = 100;
 
-void updateLed() {
-    digitalWrite(PIN_LED, brightness ? HIGH : LOW);
+static volatile uint8_t ledBrightness = 255;
+
+inline void updateLed() {
+    if (brightness && ledBrightness) PORTD |= 1 << PIN_LED; else PORTD &= ~(1 << PIN_LED);
 }
 
 void sendState() {
@@ -44,6 +47,9 @@ void onData(const uint8_t* data, uint8_t length) {
     if (data[0] == CMD_SET_MODE && length == 3) {
         mode = data[1];
         modeNoDimmerBrightness = data[2];
+    }
+    if (data[0] == CMD_SET_LED && length == 2) {
+        ledBrightness = data[1];
     }
 }
 
@@ -66,6 +72,9 @@ void setup() {
     TCCR1A = 0;
     TCCR1B = 1 << CS11; //(start 8 prescaler)
 
+    TCCR2A = 0;
+    TIMSK2 = (1 << OCIE2A) | (1 << TOIE2);
+
     sei();
 
     uint8_t announce = RSP_INIT;
@@ -84,19 +93,28 @@ ISR(TIMER1_COMPA_vect) {
     PORTD &= ~(1 << PIN_TRIAC);
 }
 
-//peak cross
 ISR(INT0_vect) {
     TCNT1 = 0;
     OCR1A = timerDelay;
     next = true;
 }
 
-static const uint8_t powerToTicks[100] PROGMEM = { 
+ISR(TIMER2_COMPA_vect) {
+    DDRD &= ~(1 << PIN_LED);
+    PORTD &= ~(1 << PIN_LED);
+}
+
+ISR(TIMER2_OVF_vect) {
+    updateLed();
+    DDRD |= 1 << PIN_LED;
+}
+
+static const uint8_t powerToTicks[100] PROGMEM = {
     75, 72, 71, 70, 69, 68, 68, 67, 66, 66, 65, 65, 64, 64, 63, 63, 62, 62, 62, 61,
-    61, 60, 60, 60, 59, 59, 58, 58, 58, 57, 57, 57, 56, 56, 56, 55, 55, 55, 54, 54, 
-    54, 53, 53, 53, 52, 52, 52, 51, 51, 51, 50, 50, 50, 49, 49, 49, 48, 48, 48, 47, 
-    47, 47, 46, 46, 46, 45, 45, 45, 44, 44, 44, 43, 43, 43, 42, 42, 41, 41, 41, 40, 
-    40, 39, 39, 39, 38, 38, 37, 37, 36, 36, 35, 35, 34, 34, 33, 33, 32, 31, 30, 29 
+    61, 60, 60, 60, 59, 59, 58, 58, 58, 57, 57, 57, 56, 56, 56, 55, 55, 55, 54, 54,
+    54, 53, 53, 53, 52, 52, 52, 51, 51, 51, 50, 50, 50, 49, 49, 49, 48, 48, 48, 47,
+    47, 47, 46, 46, 46, 45, 45, 45, 44, 44, 44, 43, 43, 43, 42, 42, 41, 41, 41, 40,
+    40, 39, 39, 39, 38, 38, 37, 37, 36, 36, 35, 35, 34, 34, 33, 33, 32, 31, 30, 29
 };
 
 void handleRamp(uint32_t now) {
@@ -109,13 +127,31 @@ void handleRamp(uint32_t now) {
             if (current < brightness) current++;
             else if (current > brightness) current--;
 
-            uint16_t nextDelay = current 
+            uint16_t nextDelay = current
                 ? pgm_read_byte(&powerToTicks[current - 1]) * 100 : 0xFFFF;
 
             if (nextDelay != timerDelay) {
                 cli();
                 timerDelay = nextDelay;
                 sei();
+            }
+        }
+
+        static uint8_t currentLedBrightness = ledBrightness;
+        if (currentLedBrightness != ledBrightness) {
+            currentLedBrightness = ledBrightness;
+
+            OCR2A = currentLedBrightness;
+            if (currentLedBrightness == 255 || currentLedBrightness == 0) {
+                TCCR2B = 0;
+                if (currentLedBrightness)
+                    DDRD |= 1 << PIN_LED;
+                else
+                    DDRD &= ~(1 << PIN_LED);
+                updateLed();
+            }
+            else {
+                TCCR2B = 1 << CS22;
             }
         }
     }
@@ -196,7 +232,7 @@ bool handleTouchEvents(uint32_t now) {
 
 void loop() {
     auto now = millis();
-    
+
     handleRamp(now);
     auto touchPresent = handleTouchEvents(now);
 
