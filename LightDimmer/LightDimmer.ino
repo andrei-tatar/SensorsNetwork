@@ -25,7 +25,7 @@ static volatile bool next = false;
 static volatile uint8_t mode = 0;
 static volatile uint8_t modeNoDimmerBrightness = 100;
 
-static volatile uint8_t ledBrightness = 255;
+static uint8_t ledBrightness = 255;
 
 inline void updateLed() {
     if (brightness && ledBrightness) PORTD |= 1 << PIN_LED; else PORTD &= ~(1 << PIN_LED);
@@ -49,7 +49,7 @@ void onData(const uint8_t* data, uint8_t length) {
         modeNoDimmerBrightness = data[2];
     }
     if (data[0] == CMD_SET_LED && length == 2) {
-        ledBrightness = data[1];
+        setLedBrightness(data[1]);
     }
 }
 
@@ -73,6 +73,7 @@ void setup() {
     TCCR1B = 1 << CS11; //(start 8 prescaler)
 
     TCCR2A = 0;
+    TCCR2B = 0;
     TIMSK2 = (1 << OCIE2A) | (1 << TOIE2);
 
     sei();
@@ -136,24 +137,25 @@ void handleRamp(uint32_t now) {
                 sei();
             }
         }
+    }
+}
 
-        static uint8_t currentLedBrightness = ledBrightness;
-        if (currentLedBrightness != ledBrightness) {
-            currentLedBrightness = ledBrightness;
+void setLedBrightness(uint8_t brightness) {
+    if (brightness == ledBrightness)  return;
 
-            OCR2A = currentLedBrightness;
-            if (currentLedBrightness == 255 || currentLedBrightness == 0) {
-                TCCR2B = 0;
-                if (currentLedBrightness)
-                    DDRD |= 1 << PIN_LED;
-                else
-                    DDRD &= ~(1 << PIN_LED);
-                updateLed();
-            }
-            else {
-                TCCR2B = 1 << CS22;
-            }
-        }
+    ledBrightness = brightness;
+
+    OCR2A = brightness;
+    if (brightness == 255 || brightness == 0) {
+        TCCR2B = 0;
+        if (brightness)
+            DDRD |= 1 << PIN_LED;
+        else
+            DDRD &= ~(1 << PIN_LED);
+        updateLed();
+    }
+    else {
+        TCCR2B = 1 << CS22;
     }
 }
 
@@ -168,10 +170,6 @@ bool handleTouchEvents(uint32_t now) {
     if (touchState != lastTouchState) {
         lastTouchState = touchState;
         if (mode & MODE_DISABLE_MAN) {
-            if (touchState)
-                analogWrite(PIN_LED, 128);
-            else
-                updateLed();
             return false;
         }
 
@@ -216,7 +214,6 @@ bool handleTouchEvents(uint32_t now) {
             if (now >= nextManualChange) {
                 levelChanged = true;
                 nextManualChange = now + 30;
-                analogWrite(PIN_LED, 128);
                 if (increaseLevel) {
                     if (brightness < 100) brightness++;
                 }
