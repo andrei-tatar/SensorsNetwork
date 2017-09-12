@@ -45,7 +45,7 @@ export class Telnet implements ConnectableMessageLayer {
     close() {
         clearTimeout(this.reconnectTimeout);
         if (this.socket) {
-            this.socket.end();
+            this.socket.destroy();
             this.socket = null;
         }
     }

@@ -1,7 +1,8 @@
 import { MessageLayer } from './../communication/interfaces';
+import { ReplaySubject } from 'rxjs/ReplaySubject';
 
 export class Dimmer {
-    private _brightness: number;
+    private readonly _brightness: ReplaySubject<number>;
 
     private static readonly cmd_SetBrightness = 0x01;
     private static readonly cmd_GetStatus = 0x02;
@@ -10,6 +11,11 @@ export class Dimmer {
     private static readonly rsp_BrightnessLevel = 0x02;
 
     constructor(private layer: MessageLayer) {
+        this._brightness = new ReplaySubject(1);
+    }
+
+    get brightness() {
+        return this._brightness.asObservable();
     }
 
     async requestStateUpdate() {
@@ -18,7 +24,7 @@ export class Dimmer {
 
     protected onMessage(msg: Buffer) {
         switch (msg[0]) {
-            case Dimmer.rsp_BrightnessLevel: this._brightness = msg[1];
+            case Dimmer.rsp_BrightnessLevel: this._brightness.next(msg[1]);
         }
     }
 

@@ -1,0 +1,36 @@
+<script type="text/javascript">
+    RED.nodes.registerType('snode-dimmer', {
+        category: 'snode',
+        color: '#a6bbcf',
+        defaults: {
+            bridge: { type: 'snode-bridge', required: true },
+            name: { value: 'Dimmer' },
+            key: { value: '000102030405060708090a0b0c0d0e0f' },
+        },
+        inputs: 1,
+        outputs: 1,
+        // icon: "ui_numeric.png",
+        paletteLabel: 'dimmer',
+        label: function () { return this.name || 'dimmer'; }
+    });
+
+</script>
+
+<script type="text/x-red" data-template-name="snode-dimmer">
+    <div class="form-row">
+        <label for="node-input-bridge"><i class="fa fa-table"></i> Bridge</label>
+        <input type="text" id="node-input-bridge">
+    </div>
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-key"><i class="fa fa-tasks"></i> Key</label>
+        <input type="text" id="node-input-key">
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="snode-dimmer">
+    <p>Dimmer node.</p>
+</script>

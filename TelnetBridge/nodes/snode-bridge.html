@@ -1,0 +1,31 @@
+<script type="text/javascript">
+    RED.nodes.registerType('snode-bridge', {
+        category: 'config',
+        defaults: {
+            name: { value: 'Telnet Bridge' },
+            host: { value: '192.168.1.50' },
+            port: { value: 23, validate: RED.validators.number() },
+        },
+        label: function () { return this.name || 'Tab'; }
+    });
+
+</script>
+
+<script type="text/x-red" data-template-name="snode-bridge">
+    <div class="form-row">
+        <label for="node-config-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-config-input-name">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-host"><i class="fa fa-file-image-o"></i> Host</label>
+        <input type="text" id="node-config-input-host">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-port"><i class="fa fa-sort"></i> Port</label>
+        <input type="text" id="node-config-input-port">
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="snode-bridge">
+    <p>Bridge</p>
+</script>
