@@ -8,5 +8,21 @@ export interface MessageLayer {
 
 export interface ConnectableMessageLayer extends MessageLayer {
     close();
-    open(): Promise<void>;
+}
+
+export interface Logger {
+    log(...args: any[]);
+    info(...args: any[]);
+    warn(...args: any[]);
+    error(...args: any[]);
+
+    trace(...args: any[]);
+    debug(...args: any[]);
+}
+
+export interface NodeRedNode {
+    error(msg: string);
+    status(options: { fill: string, shape: string, text: string });
+    send(msg: { payload });
+    on(event: 'input' | 'close', callback: (msg) => void);
 }

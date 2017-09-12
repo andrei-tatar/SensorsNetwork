@@ -1,3 +1,4 @@
+import { ReplaySubject } from 'rxjs/ReplaySubject';
 import { Subject } from 'rxjs/Subject';
 import { Observable } from 'rxjs/Observable';
 import { MessageLayer, ConnectableMessageLayer } from './interfaces';
@@ -28,10 +29,9 @@ class TimeoutNoAckError extends RetryError {
 }
 
 export class Communication {
-    private readonly keys: Buffer[] = [];
+    private readonly nodes: { key: Buffer, id?: number }[] = [];
     private readonly rxMessages: Observable<{ msg: Buffer, id: number }>;
-    private inited: boolean;
-    private initPromise = _.memoize(() => this.init());
+    private nodesChanged: boolean = false;
 
     private static readonly Cmd_Init = 0x90;
     private static readonly Cmd_SendMsg = 0x92;
@@ -45,7 +45,7 @@ export class Communication {
 
     constructor(private below: MessageLayer) {
         this.rxMessages = this.below.data
-            .filter(p => p[0] === Communication.Rsp_MsgRecevied && p[1] < this.keys.length)
+            .filter(p => p[0] === Communication.Rsp_MsgRecevied)
             .map(p => {
                 const msg = new Buffer(p.length - 2);
                 p.copy(msg, 0, 2, p.length);
@@ -56,7 +56,8 @@ export class Communication {
     private async sendPacketAndWaitFor(packet: Buffer, verifyReply: (packet: Buffer) => boolean, tries: number = 3, timeout: number = 600) {
         while (tries-- !== 0) {
             try {
-                const waitPromise = this.below.data
+                await this.below.send(packet);
+                await this.below.data
                     .map(p => verifyReply(p))
                     .filter(s => s)
                     .first()
@@ -66,9 +67,7 @@ export class Communication {
                         if (err.message.indexOf('Timeout') >= 0) throw new RetryError('timeout; no reply received');
                         throw err;
                     })
-                    .toPromise()
-                await this.below.send(packet);
-                await waitPromise;
+                    .toPromise();
                 break;
             } catch (err) {
                 if (err instanceof RetryError && tries !== 0) continue;
@@ -78,7 +77,7 @@ export class Communication {
     }
 
     private async send(id: number, data: Buffer) {
-        if (id < 0 || id >= this.keys.length)
+        if (id < 0)
             throw new Error('invalid id');
 
         const packet = new Buffer(data.length + 2);
@@ -95,41 +94,46 @@ export class Communication {
         });
     }
 
-    private getNodeIndex(key: Buffer) {
-        return _.indexOf(this.keys, key);
-    }
-
-    register(key: Buffer): MessageLayer {
+    register(key: Buffer): ConnectableMessageLayer {
         if (key.length != 16) throw new Error('invalid key length');
-        if (this.inited) throw new Error('cannot register after init');
 
         let prevSend: Promise<void>;
-        this.keys.push(key);
+        const node = { key, id: null };
+        this.nodes.push(node);
+        this.nodesChanged = true;
 
         return {
+            close: () => {
+                node.id = null;
+                _.pull(this.nodes, node);
+                this.nodesChanged = true;
+            },
             data: this.rxMessages
-                .filter(m => m.id === this.getNodeIndex(key))
+                .filter(m => m.id === node.id)
                 .map(m => m.msg),
             send: async (msg) => {
-                await this.initPromise();
+                await this.init();
                 if (prevSend) await prevSend.catch(e => { });
-                prevSend = this.send(this.getNodeIndex(key), msg);
+                prevSend = this.send(node.id, msg);
                 return prevSend;
             },
         }
     }
 
-    private async init() {
-        if (this.inited) return;
+    async init(force: boolean = false) {
+        if (!force && !this.nodesChanged) return;
 
-        let data = new Buffer(this.keys.length * 16 + 2);
+        const data = new Buffer(this.nodes.length * 16 + 2);
         let offset = data.writeUInt8(Communication.Cmd_Init, 0);
-        offset = data.writeUInt8(this.keys.length, offset);
-        for (var key of this.keys) {
-            offset += key.copy(data, offset, 0, 16);
-        }
+        offset = data.writeUInt8(this.nodes.length, offset);
+
+        _.forEach(this.nodes, (node, index) => {
+            offset += node.key.copy(data, offset, 0, 16);
+            node.id = index;
+        });
 
         await this.sendPacketAndWaitFor(data, p => p.length == 1 && p[0] == Communication.Rsp_Inited);
-        this.inited = true;
+
+        this.nodesChanged = false;
     }
 }

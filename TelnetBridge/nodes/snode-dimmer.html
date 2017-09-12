@@ -5,7 +5,12 @@
         defaults: {
             bridge: { type: 'snode-bridge', required: true },
             name: { value: 'Dimmer' },
-            key: { value: '000102030405060708090a0b0c0d0e0f' },
+            key: { value: '000102030405060708090a0b0c0d0e0f', required: true, validate: RED.validators.regex(/[a-f0-9]{32}/) },
+            manual: { value: true },
+            manualdimm: { value: false },
+            maxbrightness: { value: 100, required: true, validate: function (n) { return n >= 10 && n <= 100 } },
+            ledbrightness: { value: 255, required: true, validate: function (n) { return n >= 0 && n <= 255 } },
+
         },
         inputs: 1,
         outputs: 1,
@@ -26,8 +31,24 @@
         <input type="text" id="node-input-name">
     </div>
     <div class="form-row">
-        <label for="node-input-key"><i class="fa fa-tasks"></i> Key</label>
+        <label for="node-input-key"><i class="fa fa-key"></i> Key</label>
         <input type="text" id="node-input-key">
+    </div>
+    <div class="form-row">
+        <label for="node-input-maxbrightness" style="width:50%"><i class="fa fa-lightbulb-o"></i> Max manual brightness</label>
+        <input type="text" id="node-input-maxbrightness" style="width:30%">
+    </div>
+    <div class="form-row">
+        <label for="node-input-ledbrightness" style="width:50%"><i class="fa fa-lightbulb-o"></i> Default LED brightness</label>
+        <input type="text" id="node-input-ledbrightness" style="width:30%">
+    </div>
+    <div class="form-row">
+        <label style="width:50%" for="node-input-manual"><i class="fa fa-arrow-right"></i> Allow manual control: </label>
+        <input type="checkbox" checked id="node-input-manual" style="display:inline-block; width:auto; vertical-align:top;">
+    </div>
+    <div class="form-row">
+        <label style="width:50%" for="node-input-manualdimm"><i class="fa fa-arrow-right"></i> Allow manual dimm control: </label>
+        <input type="checkbox" checked id="node-input-manualdimm" style="display:inline-block; width:auto; vertical-align:top;">
     </div>
 </script>
 

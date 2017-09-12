@@ -3,8 +3,8 @@
         category: 'config',
         defaults: {
             name: { value: 'Telnet Bridge' },
-            host: { value: '192.168.1.50' },
-            port: { value: 23, validate: RED.validators.number() },
+            host: { value: '192.168.1.50', required: true },
+            port: { value: 23, required: true, validate: RED.validators.number() },
         },
         label: function () { return this.name || 'Tab'; }
     });
