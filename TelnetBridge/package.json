@@ -24,7 +24,8 @@
   "node-red": {
     "nodes": {
       "snode-bridge": "nodes/snode-bridge.js",
-      "snode-dimmer": "nodes/snode-dimmer.js"
+      "snode-dimmer": "nodes/snode-dimmer.js",
+      "snode-temperature": "nodes/snode-temperature.js"
     }
   }
 }

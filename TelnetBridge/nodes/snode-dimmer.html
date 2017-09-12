@@ -1,11 +1,11 @@
 <script type="text/javascript">
     RED.nodes.registerType('snode-dimmer', {
         category: 'snode',
-        color: '#a6bbcf',
+        color: '#e6a4a5',
         defaults: {
             bridge: { type: 'snode-bridge', required: true },
             name: { value: 'Dimmer' },
-            key: { value: '000102030405060708090a0b0c0d0e0f', required: true, validate: RED.validators.regex(/[a-f0-9]{32}/) },
+            key: { value: '', required: true, validate: RED.validators.regex(/[a-f0-9]{32}/) },
             manual: { value: true },
             manualdimm: { value: false },
             maxbrightness: { value: 100, required: true, validate: function (n) { return n >= 10 && n <= 100 } },
@@ -14,7 +14,7 @@
         },
         inputs: 1,
         outputs: 1,
-        // icon: "ui_numeric.png",
+        icon: "bridge-dash.png",
         paletteLabel: 'dimmer',
         label: function () { return this.name || 'dimmer'; }
     });
@@ -32,7 +32,7 @@
     </div>
     <div class="form-row">
         <label for="node-input-key"><i class="fa fa-key"></i> Key</label>
-        <input type="text" id="node-input-key">
+        <input type="text" id="node-input-key" placeholder="16 bytes hex without spaces/0x">
     </div>
     <div class="form-row">
         <label for="node-input-maxbrightness" style="width:50%"><i class="fa fa-lightbulb-o"></i> Max manual brightness</label>

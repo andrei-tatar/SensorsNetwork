@@ -40,7 +40,7 @@ module.exports = function (RED) {
                 .combineLatest(connected, dimmer.brightness.startWith(0))
                 .subscribe(([connected, brightness]) => {
                     node.status(connected
-                        ? { fill: 'green', shape: 'ring', text: `connected (${brightness ? brightness + '%' : 'off'})` }
+                        ? { fill: 'green', shape: 'dot', text: `connected (${brightness ? brightness + '%' : 'off'})` }
                         : { fill: 'red', shape: 'ring', text: 'not connected' });
                 }));
 
