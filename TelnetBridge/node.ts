@@ -1,10 +1,11 @@
-import { Communication, Registration } from './communication';
+import { MessageLayer, ConnectableMessageLayer } from './communication/interfaces';
+import { Communication } from './communication/communication';
 
 export class Node {
-    private readonly registration: Promise<Registration>;
+    private readonly registration: ConnectableMessageLayer;
 
     constructor(key: Buffer, comm: Communication) {
-        this.registration = comm.register(key, msg => this.onMessage(msg));
+        this.registration = comm.register(key);
         this.registration.then(() => this.init());
     }
 

@@ -1,4 +1,4 @@
-import { Communication } from './communication';
+import { Communication } from './communication/communication';
 import { Node } from './node';
 
 export class Dimmer extends Node {
@@ -6,7 +6,6 @@ export class Dimmer extends Node {
 
     constructor(key: Buffer, comm: Communication) {
         super(key, comm);
-
     }
 
     protected async init() {
