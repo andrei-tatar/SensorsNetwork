@@ -26,6 +26,7 @@ module.exports = function (RED) {
         telnetLayer.open();
         node.on("close", () => {
             subscription.unsubscribe();
+            communicationLayer.close();
             telnetLayer.close();
         });
     }

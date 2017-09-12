@@ -1,4 +1,4 @@
-import { ReplaySubject } from 'rxjs/ReplaySubject';
+import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { Subject } from 'rxjs/Subject';
 import { Observable } from 'rxjs/Observable';
 import { MessageLayer, ConnectableMessageLayer } from './interfaces';
@@ -9,6 +9,9 @@ import 'rxjs/add/operator/first';
 import 'rxjs/add/operator/timeout';
 import 'rxjs/add/operator/toPromise';
 import 'rxjs/add/operator/catch';
+import 'rxjs/add/operator/groupBy';
+import 'rxjs/add/operator/concatMap';
+import 'rxjs/add/operator/mergeall';
 
 class CommunicationError extends Error {
     constructor(message: string) {
@@ -28,10 +31,18 @@ class TimeoutNoAckError extends RetryError {
     }
 }
 
+interface QueueMessage {
+    msg: Buffer;
+    id: number;
+    resolve: (value?) => void;
+    reject: (err) => void;
+}
+
 export class Communication {
     private readonly nodes: { key: Buffer, id?: number }[] = [];
     private readonly rxMessages: Observable<{ msg: Buffer, id: number }>;
     private nodesChanged: boolean = false;
+    private readonly txQueue: Subject<QueueMessage>;
 
     private static readonly Cmd_Init = 0x90;
     private static readonly Cmd_SendMsg = 0x92;
@@ -51,10 +62,41 @@ export class Communication {
                 p.copy(msg, 0, 2, p.length);
                 return { msg, id: p[1] };
             });
+        this.txQueue = new Subject();
+        this.txQueue
+            .groupBy(m => m.id)
+            .map(group =>
+                group.concatMap(msg => {
+                    let subject = new BehaviorSubject(msg);
+                    let oldReject = msg.reject;
+                    let oldResolve = msg.resolve;
+                    msg.reject = (err) => { oldReject(err); subject.complete(); };
+                    msg.resolve = () => { oldResolve(); subject.complete(); };
+                    return subject;
+                })
+            )
+            .mergeAll()
+            .subscribe(({ id, msg, resolve, reject }) => {
+                const data = new Buffer(msg.length + 2);
+                let offset = data.writeUInt8(Communication.Cmd_SendMsg, 0);
+                offset = data.writeUInt8(id, offset);
+                msg.copy(data, offset, 0, msg.length);
+
+                this.sendPacketAndWaitFor(data,
+                    r => {
+                        if (r[0] === Communication.Rsp_MsgSent && r[1] === id) return true; //packet sent
+                        if (r[0] === Communication.Err_NoAck && r[1] === id) throw new TimeoutNoAckError('timeout; no ACK');
+                        if (r[0] === Communication.Err_NodeBusy && r[1] === id) throw new RetryError('id busy');
+                        if (r[0] === Communication.Err_InvalidSize && r[1] === id) throw new CommunicationError('invalid packet size');
+                        if (r[0] === Communication.Err_InvalidId && r[1] === id) throw new CommunicationError('invalid id');
+                    })
+                    .then(() => resolve())
+                    .catch(err => reject(err));
+            });
     }
 
     private async sendPacketAndWaitFor(packet: Buffer, verifyReply: (packet: Buffer) => boolean, tries: number = 3, timeout: number = 600) {
-        while (tries-- !== 0) {
+        while (tries--) {
             try {
                 await this.below.send(packet);
                 await this.below.data
@@ -76,28 +118,19 @@ export class Communication {
         }
     }
 
-    private async send(id: number, data: Buffer) {
+    private async send(id: number, msg: Buffer) {
         if (id < 0)
             throw new Error('invalid id');
 
-        const packet = new Buffer(data.length + 2);
-        let offset = packet.writeUInt8(Communication.Cmd_SendMsg, 0);
-        offset = packet.writeUInt8(id, offset);
-        data.copy(packet, offset, 0, data.length);
 
-        await this.sendPacketAndWaitFor(packet, r => {
-            if (r[0] === Communication.Rsp_MsgSent && r[1] === id) return true; //packet sent
-            if (r[0] === Communication.Err_NoAck && r[1] === id) throw new TimeoutNoAckError('timeout; no ACK');
-            if (r[0] === Communication.Err_NodeBusy && r[1] === id) throw new RetryError('id busy');
-            if (r[0] === Communication.Err_InvalidSize && r[1] === id) throw new CommunicationError('invalid packet size');
-            if (r[0] === Communication.Err_InvalidId && r[1] === id) throw new CommunicationError('invalid id');
+        await new Promise((resolve, reject) => {
+            this.txQueue.next({ id, msg, resolve, reject });
         });
     }
 
     register(key: Buffer): ConnectableMessageLayer {
         if (key.length != 16) throw new Error('invalid key length');
 
-        let prevSend: Promise<void>;
         const node = { key, id: null };
         this.nodes.push(node);
         this.nodesChanged = true;
@@ -113,9 +146,7 @@ export class Communication {
                 .map(m => m.msg),
             send: async (msg) => {
                 await this.init();
-                if (prevSend) await prevSend.catch(e => { });
-                prevSend = this.send(node.id, msg);
-                return prevSend;
+                await this.send(node.id, msg);
             },
         }
     }
@@ -135,5 +166,9 @@ export class Communication {
         await this.sendPacketAndWaitFor(data, p => p.length == 1 && p[0] == Communication.Rsp_Inited);
 
         this.nodesChanged = false;
+    }
+
+    close() {
+        this.txQueue.complete();
     }
 }

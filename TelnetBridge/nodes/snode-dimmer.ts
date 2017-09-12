@@ -27,7 +27,6 @@ module.exports = function (RED) {
         const subscriptions: Subscription[] = [];
 
         subscriptions.push(connected
-            .first()
             .subscribe(connected => {
                 if (connected) {
                     dimmer.requestStateUpdate().catch(err => node.error(`while getting status: ${err.message}`));
