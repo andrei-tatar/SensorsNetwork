@@ -234,12 +234,12 @@ void onSerialPacketReceived(uint8_t *data, uint8_t size) {
         size -= 2;
         if (size > 24) {
             data[0] = FRAME_ERR_INVALID_SIZE;
-            sendSerialPacket(data, 1);
+            sendSerialPacket(data, 2);
             break;
         }
         if (sensorId >= sensorsCount) {
             data[0] = FRAME_ERR_INVALID_ID;
-            sendSerialPacket(data, 1);
+            sendSerialPacket(data, 2);
             break;
         }
 
@@ -247,7 +247,7 @@ void onSerialPacketReceived(uint8_t *data, uint8_t size) {
         sensor = &sensors[sensorId];
         if (sensor->retries) {
             data[0] = FRAME_ERR_BUSY;
-            sendSerialPacket(data, 1);
+            sendSerialPacket(data, 2);
             break;
         }
 
