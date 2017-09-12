@@ -1,7 +1,7 @@
 #include "Tcn.h"
 #include "SensorLib.h"
 
-uint8_t key[] = { 0xa9, 0x79, 0x14, 0x3a, 0x44, 0xc3, 0xe9, 0x35, 0x79, 0xe2, 0x48, 0x6d, 0xba, 0xe0, 0xa4, 0x16 };
+uint8_t key[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
 Sensor sensor(key);
 Tcn temp;
 
@@ -25,6 +25,7 @@ void loop() {
         msg[4] = voltage >> 8;
         msg[5] = voltage;
     }
+
     sensor.sendAndWait(msg, sizeof(msg));
     sensor.powerDown(300); //5 min
 }
