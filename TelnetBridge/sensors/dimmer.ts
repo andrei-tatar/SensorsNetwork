@@ -12,7 +12,7 @@ export class Dimmer {
     constructor(private layer: MessageLayer) {
     }
 
-    protected async init() {
+    async requestStateUpdate() {
         await this.layer.send(Buffer.from([0x02]));
     }
 

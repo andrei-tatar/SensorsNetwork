@@ -5,11 +5,13 @@ import * as net from 'net';
 import * as _ from 'lodash';
 
 export class Telnet implements ConnectableMessageLayer {
+    private static readonly baudRate = 57600;
+
     private readonly _data: Subject<Buffer>;
     private socket: net.Socket;
     private reconnectTimeout: NodeJS.Timer;
 
-    constructor(private host: string, private port: number) {
+    constructor(private host: string, private port: number, private reconnectInterval: number = 5000) {
         this._data = new Subject<Buffer>();
     }
 
@@ -24,23 +26,23 @@ export class Telnet implements ConnectableMessageLayer {
             this.socket.on('data', data => this._data.next(data));
             this.socket.once('disconnect', () => {
                 logger.warn('telnet: disconnected from server');
-                this.reconnectTimeout = setTimeout(() => this.open(), 5000);
+                this.reconnectTimeout = setTimeout(() => this.open(), this.reconnectInterval);
             });
             this.socket.once('error', err => {
                 logger.warn('telnet: error: ', err.message);
-                this.reconnectTimeout = setTimeout(() => this.open(), 5000);
+                this.reconnectTimeout = setTimeout(() => this.open(), this.reconnectInterval);
             });
 
             logger.debug('telnet: connecting');
             this.socket.connect(this.port, this.host, async () => {
                 logger.debug('telnet: connected');
-                await this.setBaud(57600);
+                await this.setBaud(Telnet.baudRate);
                 resolve();
             });
         });
     }
 
-    async close() {
+    close() {
         clearTimeout(this.reconnectTimeout);
         if (this.socket) {
             this.socket.end();
@@ -86,7 +88,6 @@ export class Telnet implements ConnectableMessageLayer {
             0xF0, //command sequence end
         ]);
         changeBaud.writeUInt32BE(baud, 4);
-        console.log(changeBaud);
         await this.sendRaw(changeBaud);
     }
 }

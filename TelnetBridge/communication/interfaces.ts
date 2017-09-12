@@ -7,6 +7,6 @@ export interface MessageLayer {
 }
 
 export interface ConnectableMessageLayer extends MessageLayer {
-    close(): Promise<void>;
+    close();
     open(): Promise<void>;
 }
