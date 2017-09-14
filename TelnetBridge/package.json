@@ -1,10 +1,9 @@
 {
   "name": "node-red-contrib-snode",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Node-Red plugin for the nodes created in this repo",
   "scripts": {
-    "start": "tsc && node index.js",
-    "dev": "concurrently --kill-others \"tsc -w\" \"nodemon index.js\"",
+    "dev": "tsc -w",
     "prod": "tsc && npm publish",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -29,6 +28,7 @@
     "nodes": {
       "snode-bridge": "nodes/snode-bridge.js",
       "snode-dimmer": "nodes/snode-dimmer.js",
+      "snode-input": "nodes/snode-input.js",
       "snode-temperature": "nodes/snode-temperature.js"
     }
   }
