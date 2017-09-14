@@ -11,7 +11,7 @@ import 'rxjs/add/operator/toPromise';
 import 'rxjs/add/operator/catch';
 import 'rxjs/add/operator/groupBy';
 import 'rxjs/add/operator/concatMap';
-import 'rxjs/add/operator/mergeall';
+import 'rxjs/add/operator/mergeAll';
 
 class CommunicationError extends Error {
     constructor(message: string) {

@@ -3,7 +3,7 @@ import { Subscription } from "rxjs/Subscription";
 import { Subject } from 'rxjs/Subject';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { ConnectableMessageLayer, Logger } from './interfaces';
-import 'rxjs/add/operator/distinctuntilchanged';
+import 'rxjs/add/operator/distinctUntilChanged';
 import 'rxjs/add/observable/interval';
 import * as net from 'net';
 import * as _ from 'lodash';
