@@ -51,7 +51,7 @@ void sendPacket(Sensor *sensor, const uint8_t *data, uint8_t length);
 #define MSG_NACK                    0x03
 
 void setup() {
-    Serial.begin(57600);
+    Serial.begin(115200);
     pinMode(PIN_RX_LED, OUTPUT);
     pinMode(PIN_TX_LED, OUTPUT);
 }

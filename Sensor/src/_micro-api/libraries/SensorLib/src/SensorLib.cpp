@@ -182,6 +182,10 @@ void Sensor::powerDown(uint16_t seconds) {
     _radio.stopListening();
     _radio.powerDown();
 
+    if (seconds == 0) {
+        LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
+    }
+
     while (seconds > 8) {
         LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
         seconds -= 8;
