@@ -23,6 +23,6 @@ export interface Logger {
 export interface NodeRedNode {
     error(msg: string);
     status(options: { fill: string, shape: string, text: string });
-    send(msg: { payload });
+    send(msg: { payload, [key: string]: any });
     on(event: 'input' | 'close', callback: (msg) => void);
 }

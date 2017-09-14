@@ -49,19 +49,18 @@ module.exports = function (RED) {
                 .distinctUntilChanged()
                 .subscribe(brightness => {
                     node.send({
-                        payload: {
-                            brightness
-                        }
+                        payload: brightness,
+                        topic: config.topic,
                     });
                 }));
 
         node.on('input', msg => {
-            if (typeof msg.payload.brightness === 'number') {
-                dimmer.setBrightness(msg.payload.brightness).catch(err => node.error(`while setting bright: ${err.message}`));;
-            }
-            if (typeof msg.payload.ledbrightness === 'number') {
-                config.ledbrightness = msg.payload.ledbrightness;
-                dimmer.setLedBrightness(msg.payload.ledbrightness).catch(err => node.error(`while setting led bright: ${err.message}`));;
+            const value = Math.min(100, Math.max(0, parseInt(msg.payload) || 0));
+            if (msg.type === 'led') {
+                config.ledbrightness = value;
+                dimmer.setLedBrightness(value).catch(err => node.error(`while setting led bright: ${err.message}`));;
+            } else {
+                dimmer.setBrightness(value).catch(err => node.error(`while setting bright: ${err.message}`));;
             }
         });
 
