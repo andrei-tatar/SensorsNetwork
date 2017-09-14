@@ -32,7 +32,7 @@ export class Dimmer {
     }
 
     async requestStateUpdate() {
-        await this.layer.send(Buffer.from([0x02]));
+        await this.layer.send(Buffer.from([Dimmer.cmd_GetStatus]));
     }
 
     async setMode(manualControl: boolean, manualDimm: boolean, manualBrightness: number) {
@@ -50,7 +50,9 @@ export class Dimmer {
             case Dimmer.rsp_Init:
                 this.syncState();
                 break;
-            case Dimmer.rsp_BrightnessLevel: this._brightness.next(msg[1]);
+            case Dimmer.rsp_BrightnessLevel:
+                this._brightness.next(msg[1]);
+                break;
         }
     }
 
@@ -66,7 +68,6 @@ export class Dimmer {
     }
 
     private syncState() {
-        this.requestStateUpdate().catch(err => { });
         if (this.state.mode) this.layer.send(this.state.mode).catch(err => { });
         if (this.state.ledBrightness) this.layer.send(this.state.ledBrightness).catch(err => { });
     }

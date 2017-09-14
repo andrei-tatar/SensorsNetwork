@@ -1,11 +1,11 @@
 {
   "name": "node-red-contrib-snode",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "1.0.1",
+  "description": "Node-Red plugin for the nodes created in this repo",
   "scripts": {
     "start": "tsc && node index.js",
     "dev": "concurrently --kill-others \"tsc -w\" \"nodemon index.js\"",
+    "publish": "tsc && npm publish",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Andrei Tatar",
@@ -13,6 +13,10 @@
   "dependencies": {
     "lodash": "^4.17.4",
     "rxjs": "^5.4.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andrei-tatar/SensorsNetwork.git"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.74",
