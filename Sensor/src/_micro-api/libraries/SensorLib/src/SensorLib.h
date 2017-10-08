@@ -21,6 +21,7 @@ private:
     uint32_t _lastSendTime;
     uint8_t _retries;
     bool _sendOk;
+    int16_t _seconds;
 
     DataReceivedHandler _handler;
 
@@ -39,6 +40,7 @@ public:
     void update();
     void onMessage(DataReceivedHandler handler);
     void powerDown(uint16_t seconds);
+    void wake();
     uint16_t readVoltage();
 };
 

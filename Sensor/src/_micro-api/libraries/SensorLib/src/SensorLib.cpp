@@ -178,30 +178,35 @@ void Sensor::onMessage(DataReceivedHandler handler) {
     _handler = handler;
 }
 
+void Sensor::wake() {
+    _seconds = 0;
+}
+
 void Sensor::powerDown(uint16_t seconds) {
+    _seconds = seconds;
     _radio.stopListening();
     _radio.powerDown();
 
-    if (seconds == 0) {
+    if (_seconds == 0) {
         LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
     }
 
-    while (seconds > 8) {
+    while (_seconds > 8) {
         LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
         seconds -= 8;
     }
 
-    while (seconds > 4) {
+    while (_seconds > 4) {
         LowPower.powerDown(SLEEP_4S, ADC_OFF, BOD_OFF);
         seconds -= 4;
     }
 
-    while (seconds > 2) {
+    while (_seconds > 2) {
         LowPower.powerDown(SLEEP_2S, ADC_OFF, BOD_OFF);
         seconds -= 2;
     }
 
-    while (seconds > 0) {
+    while (_seconds > 0) {
         LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_ON);
         seconds -= 1;
     }
