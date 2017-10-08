@@ -2,8 +2,9 @@ import { Observable } from 'rxjs/Observable';
 import { Subscription } from 'rxjs/Subscription';
 import { NodeRedNode } from './../communication/interfaces';
 import { Communication } from './../communication/communication';
-
 import 'rxjs/add/operator/do';
+import 'rxjs/add/operator/timestamp';
+import * as moment from 'moment';
 
 module.exports = function (RED) {
 
@@ -18,24 +19,43 @@ module.exports = function (RED) {
         const connected: Observable<boolean> = bridge.connected;
         const communication: Communication = bridge.communication;
         const nodeLayer = communication.register(key);
-
         const state = nodeLayer.data
-            .filter(msg => msg.length === 3)
             .map(msg => {
-                const state = msg.readUInt8(0);
-                const voltage = msg.readUInt16BE(1) / 1000;
-                return { state, voltage };
+                const state: { [key: string]: any } = {};
+                for (let offset = 0; offset < msg.length; offset++) {
+                    switch (msg.readUInt8(offset)) {
+                        case 'B'.charCodeAt(0):
+                            state.voltage = msg.readUInt8(offset + 1) / 100 + 1;
+                            offset += 1;
+                            break;
+                        case 'T'.charCodeAt(0):
+                            state.temperature = msg.readInt16BE(offset + 1) / 256;
+                            offset += 2;
+                            break;
+                        case 'L'.charCodeAt(0):
+                            state.light = msg.readInt16BE(offset + 1);
+                            offset += 2;
+                            break;
+                        case 'S'.charCodeAt(0):
+                            state.pir = msg.readUInt8(offset + 1) !== 0 ? true : false;
+                            offset += 1;
+                            break;
+                    }
+                }
+                return state;
             })
             .do(state => {
                 node.send({ payload: state })
-            });
+            })
+            .timestamp();
 
         const subscription =
             Observable
-                .combineLatest(connected, state.startWith(null))
+                .combineLatest(connected, state.startWith(null), Observable.interval(30000).startWith(0))
                 .subscribe(([connected, state]) => {
+                    const lastMessage = state ? `(${moment(state.timestamp).fromNow()})` : '';
                     node.status(connected
-                        ? { fill: 'green', shape: 'dot', text: `connected${state ? ` (${state.state}, ${Math.round(state.voltage * 10) / 10}V)` : ''}` }
+                        ? { fill: 'green', shape: 'dot', text: `connected ${lastMessage}` }
                         : { fill: 'red', shape: 'ring', text: 'not connected' });
                 });
 

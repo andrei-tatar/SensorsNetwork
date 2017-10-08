@@ -3,7 +3,7 @@ import { Subscription } from 'rxjs/Subscription';
 import { Observable } from 'rxjs/Observable';
 import { Dimmer } from './../sensors/dimmer';
 import { Communication } from './../communication/communication';
-
+import * as moment from 'moment';
 import 'rxjs/add/observable/combineLatest'
 import 'rxjs/add/operator/startWith'
 import 'rxjs/add/operator/first'
@@ -37,10 +37,12 @@ module.exports = function (RED) {
 
         subscriptions.push(
             Observable
-                .combineLatest(connected, dimmer.brightness.startWith(0))
-                .subscribe(([connected, brightness]) => {
+                .combineLatest(connected, nodeLayer.data.startWith(null).timestamp(), Observable.interval(30000).startWith(0))
+                .subscribe(([connected, msg]) => {
+                    const lastMessage = msg ? `(${moment(msg.timestamp).fromNow()})` : '';
+                    
                     node.status(connected
-                        ? { fill: 'green', shape: 'dot', text: `connected (${brightness ? brightness + '%' : 'off'})` }
+                        ? { fill: 'green', shape: 'dot', text: `connected ${lastMessage}` }
                         : { fill: 'red', shape: 'ring', text: 'not connected' });
                 }));
 
