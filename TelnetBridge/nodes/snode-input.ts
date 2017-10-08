@@ -33,11 +33,11 @@ module.exports = function (RED) {
                             offset += 2;
                             break;
                         case 'L'.charCodeAt(0):
-                            state.light = msg.readInt16BE(offset + 1);
+                            state.light = msg.readUInt16BE(offset + 1);
                             offset += 2;
                             break;
                         case 'S'.charCodeAt(0):
-                            state.pir = msg.readUInt8(offset + 1) !== 0 ? true : false;
+                            state.pir = msg.readUInt8(offset + 1) !== 0;
                             offset += 1;
                             break;
                     }
