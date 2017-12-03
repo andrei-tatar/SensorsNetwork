@@ -159,14 +159,27 @@ void setLedBrightness(uint8_t brightness) {
     }
 }
 
-bool handleTouchEvents(uint32_t now) {
-    static uint8_t lastTouchState = LOW;
+bool handleTouchEvents() {
+    uint32_t now = millis();
     uint8_t touchState = digitalRead(PIN_TOUCH);
+
+    static uint32_t debounce;
+    static uint8_t lastDebounceState = LOW;
+    if (touchState != lastDebounceState) {
+        debounce = now;
+        lastDebounceState = touchState;
+    }
+
+    if (now - debounce < 10) {
+        return false;
+    }
+
     static uint32_t lastChange = 0;
-    static bool increaseLevel = true;
-    static uint32_t nextManualChange;
     static bool levelChanged;
     static uint8_t lastBrightness = 100;
+    static uint32_t nextManualChange;
+    static bool increaseLevel = true;
+    static uint8_t lastTouchState = LOW;
     if (touchState != lastTouchState) {
         lastTouchState = touchState;
         if (mode & MODE_DISABLE_MAN) {
@@ -231,7 +244,7 @@ void loop() {
     auto now = millis();
 
     handleRamp(now);
-    auto touchPresent = handleTouchEvents(now);
+    auto touchPresent = handleTouchEvents();
 
     if (!touchPresent) {
         static uint8_t lastSentBrightness;
