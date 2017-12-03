@@ -175,7 +175,7 @@ bool handleTouchEvents(uint32_t now) {
 
         if (touchState) {
             if (mode & MODE_MAN_DIMMER) {
-                nextManualChange = now + 300;
+                nextManualChange = now + 500;
                 levelChanged = false;
                 if (!brightness) increaseLevel = true;
             }
@@ -213,7 +213,7 @@ bool handleTouchEvents(uint32_t now) {
         if (mode & MODE_MAN_DIMMER) {
             if (now >= nextManualChange) {
                 levelChanged = true;
-                nextManualChange = now + 30;
+                nextManualChange = now + 15;
                 if (increaseLevel) {
                     if (brightness < 100) brightness++;
                 }
