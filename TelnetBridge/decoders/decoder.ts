@@ -33,31 +33,3 @@ export interface IDecoder {
     decode(pulses: number[]): string;
     encode(code: string): number[];
 }
-
-const test = [ 2400,
-    550,
-    1200,
-    550,
-    600,
-    550,
-    1200,
-    550,
-    600,
-    550,
-    1200,
-    600,
-    1200,
-    550,
-    1200,
-    550,
-    1200,
-    550,
-    600,
-    550,
-    600,
-    600,
-    600,
-    550,
-    600 ];
-    
-    console.log(new Decoder().decode(test));

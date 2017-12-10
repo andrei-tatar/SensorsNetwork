@@ -42,7 +42,7 @@ export class SonyDecoder {
 
         var parts = code.split('_');
         let bits;
-        if (parts.length != 3 || parts[0] != 'SONY' || isFinite(bits = parseInt(parts[2])))
+        if (parts.length != 3 || parts[0] != 'SONY' || !isFinite(bits = parseInt(parts[2])))
             return null;
 
         var nr = parseInt(parts[1], 16);
@@ -50,9 +50,9 @@ export class SonyDecoder {
             return null;
 
         var pulses = [SonyDecoder.header_mark, SonyDecoder.header_space];
-        for (var i = bits; i >= 0; i--) {
+        for (var i = bits - 1; i >= 0; i--) {
             pulses.push((nr & (1 << i)) !== 0 ? SonyDecoder.one_mark : SonyDecoder.zero_mark);
-            pulses.push(SonyDecoder.header_space);
+            if (i !== 0) pulses.push(SonyDecoder.header_space);
         }
 
         return pulses;
