@@ -28,7 +28,8 @@
     "nodes": {
       "snode-bridge": "nodes/snode-bridge.js",
       "snode-dimmer": "nodes/snode-dimmer.js",
-      "snode-input": "nodes/snode-input.js"
+      "snode-input": "nodes/snode-input.js",
+      "snode-ir": "nodes/snode-ir.js"
     }
   }
 }

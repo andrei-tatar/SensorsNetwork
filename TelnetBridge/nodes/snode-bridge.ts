@@ -10,6 +10,7 @@ module.exports = function (RED) {
         const telnetLayer = new Telnet(config.host, config.port, RED.log);
         const packageLayer = new PackageCommunication(telnetLayer);
         const communicationLayer = new Communication(packageLayer);
+        node.package = packageLayer;
         node.communication = communicationLayer;
         node.connected = telnetLayer.connected;
 

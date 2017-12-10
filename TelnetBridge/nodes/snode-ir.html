@@ -1,0 +1,31 @@
+<script type="text/javascript">
+    RED.nodes.registerType('snode-ir', {
+        category: 'snode',
+        color: '#e6a4a5',
+        defaults: {
+            bridge: { type: 'snode-bridge', required: true },
+            name: { value: 'IR' },
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "bridge-dash.png",
+        paletteLabel: 'ir',
+        label: function () { return this.name || 'ir'; }
+    });
+
+</script>
+
+<script type="text/x-red" data-template-name="snode-ir">
+    <div class="form-row">
+        <label for="node-input-bridge"><i class="fa fa-table"></i> Bridge</label>
+        <input type="text" id="node-input-bridge">
+    </div>
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name">
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="snode-ir">
+    <p>IR bridge</p>
+</script>

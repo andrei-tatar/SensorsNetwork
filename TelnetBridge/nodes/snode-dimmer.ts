@@ -60,9 +60,9 @@ module.exports = function (RED) {
             const value = Math.min(100, Math.max(0, parseInt(msg.payload) || 0));
             if (msg.type === 'led') {
                 config.ledbrightness = value;
-                dimmer.setLedBrightness(value).catch(err => node.error(`while setting led bright: ${err.message}`));;
+                dimmer.setLedBrightness(value).catch(err => node.error(`while setting led bright: ${err.message}`));
             } else {
-                dimmer.setBrightness(value).catch(err => node.error(`while setting bright: ${err.message}`));;
+                dimmer.setBrightness(value).catch(err => node.error(`while setting bright: ${err.message}`));
             }
         });
 
