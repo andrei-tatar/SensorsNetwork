@@ -193,22 +193,22 @@ void Sensor::powerDown(uint16_t seconds) {
 
     while (_seconds > 8) {
         LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
-        seconds -= 8;
+        _seconds -= 8;
     }
 
     while (_seconds > 4) {
         LowPower.powerDown(SLEEP_4S, ADC_OFF, BOD_OFF);
-        seconds -= 4;
+        _seconds -= 4;
     }
 
     while (_seconds > 2) {
         LowPower.powerDown(SLEEP_2S, ADC_OFF, BOD_OFF);
-        seconds -= 2;
+        _seconds -= 2;
     }
 
     while (_seconds > 0) {
         LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_ON);
-        seconds -= 1;
+        _seconds -= 1;
     }
 
     _radio.powerUp();

@@ -64,7 +64,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\Sensor\src\_micro-api\libraries\SensorLib\src;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\libraries;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\libraries;$(ProjectDir)..\..\..\Users\andrei\Documents\Arduino\libraries;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\cores\arduino;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\variants\eightanaloginputs;$(ProjectDir)..\InputSensor;$(ProjectDir)..\Temperature;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\avr\include\;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\avr\include\avr\;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\lib\gcc\avr\4.8.1\include;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\lib\gcc\avr\4.9.2\include;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\lib\gcc\avr\4.9.3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\InputSensor;$(ProjectDir)..\Sensor\src\_micro-api\libraries\SensorLib\src;$(ProjectDir)..\..\..\Users\andrei\Documents\Arduino\libraries\RF24;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\libraries\SPI\src;$(ProjectDir)..\..\..\Users\andrei\Documents\Arduino\libraries\AESLib-master;$(ProjectDir)..\..\..\Users\andrei\Documents\Arduino\libraries\Low-Power-master;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\libraries\Wire\src;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\libraries;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\libraries;$(ProjectDir)..\..\..\Users\andrei\Documents\Arduino\libraries;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\cores\arduino;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\arduino\avr\variants\eightanaloginputs;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\avr\include\;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\avr\include\avr\;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\lib\gcc\avr\4.8.1\include;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\lib\gcc\avr\4.9.2\include;$(ProjectDir)..\..\..\Programs\arduino-1.8.1\hardware\tools\avr\lib\gcc\avr\4.9.3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)__vm\.InputSensor.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <PreprocessorDefinitions>__AVR_ATmega328p__;__AVR_ATmega328P__;F_CPU=8000000L;ARDUINO=10801;ARDUINO_AVR_PRO;ARDUINO_ARCH_AVR;__cplusplus=201103L;_VMICRO_INTELLISENSE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -84,12 +84,11 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Temperature\Tcn.h" />
-    <ClInclude Include="..\Temperature\__vm\.Temperature.vsarduino.h" />
+    <ClInclude Include="Tcn.h" />
     <ClInclude Include="__vm\.InputSensor.vsarduino.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Temperature\Tcn.cpp" />
+    <ClCompile Include="Tcn.cpp" />
   </ItemGroup>
   <PropertyGroup>
     <DebuggerFlavor>VisualMicroDebugger</DebuggerFlavor>
