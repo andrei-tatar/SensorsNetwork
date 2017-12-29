@@ -188,12 +188,12 @@ bool handleTouchEvents() {
 
         if (touchState) {
             if (mode & MODE_MAN_DIMMER) {
-                nextManualChange = now + 500;
+                nextManualChange = now + 1000;
                 levelChanged = false;
                 if (!brightness) increaseLevel = true;
             }
             else {
-                if (brightness != modeNoDimmerBrightness) {
+                if (brightness < modeNoDimmerBrightness) {
                     brightness = modeNoDimmerBrightness;
                 }
                 else {
