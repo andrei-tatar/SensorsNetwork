@@ -7,7 +7,6 @@ import * as moment from 'moment';
 import 'rxjs/add/observable/combineLatest'
 import 'rxjs/add/operator/startWith'
 import 'rxjs/add/operator/first'
-import 'rxjs/add/operator/distinctUntilChanged'
 
 module.exports = function (RED) {
 
@@ -26,8 +25,10 @@ module.exports = function (RED) {
 
         const subscriptions: Subscription[] = [];
 
-        subscriptions.push(connected
-            .subscribe(connected => {
+        const periodicSync = Observable.interval(5 * 60000).startWith(0);
+
+        subscriptions.push(Observable.combineLatest(connected, periodicSync)
+            .subscribe(([connected, index]) => {
                 if (connected) {
                     dimmer.requestStateUpdate().catch(err => node.error(`while getting status: ${err.message}`));
                     dimmer.setMode(config.manual, config.manualdimm, config.maxbrightness).catch(err => node.error(`while setting mode: ${err.message}`));
@@ -48,7 +49,6 @@ module.exports = function (RED) {
 
         subscriptions.push(
             dimmer.brightness
-                .distinctUntilChanged()
                 .subscribe(brightness => {
                     node.send({
                         payload: brightness,

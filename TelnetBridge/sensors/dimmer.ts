@@ -1,6 +1,7 @@
 import { Subscription } from 'rxjs/Subscription';
 import { MessageLayer } from './../communication/interfaces';
 import { ReplaySubject } from 'rxjs/ReplaySubject';
+import 'rxjs/add/operator/distinctUntilChanged'
 
 export class Dimmer {
     private readonly _brightness: ReplaySubject<number>;
@@ -28,7 +29,7 @@ export class Dimmer {
     }
 
     get brightness() {
-        return this._brightness.asObservable();
+        return this._brightness.distinctUntilChanged();
     }
 
     async requestStateUpdate() {
