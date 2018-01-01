@@ -22,17 +22,18 @@ module.exports = function (RED) {
         const connected: Observable<boolean> = bridge.connected;
         const nodeLayer = communication.register(key);
         const dimmer = new Dimmer(nodeLayer);
-
         const subscriptions: Subscription[] = [];
-
         const periodicSync = Observable.interval(5 * 60000).startWith(0);
 
         subscriptions.push(Observable.combineLatest(connected, periodicSync)
-            .subscribe(([connected, index]) => {
-                if (connected) {
-                    dimmer.requestStateUpdate().catch(err => node.error(`while getting status: ${err.message}`));
-                    dimmer.setMode(config.manual, config.manualdimm, config.maxbrightness).catch(err => node.error(`while setting mode: ${err.message}`));
-                    dimmer.setLedBrightness(config.ledbrightness).catch(err => node.error(`while setting led bright: ${err.message}`));
+            .subscribe(async ([connected, index]) => {
+                if (!connected) return;
+                try {
+                    await dimmer.requestStateUpdate();
+                    await dimmer.setMode(config.manual, config.manualdimm, config.maxbrightness);
+                    await dimmer.setLedBrightness(config.ledbrightness);
+                } catch (err) {
+                    node.error(`while sync: ${err.message}`)
                 }
             }));
 
@@ -41,7 +42,7 @@ module.exports = function (RED) {
                 .combineLatest(connected, nodeLayer.data.startWith(null).timestamp(), Observable.interval(30000).startWith(0))
                 .subscribe(([connected, msg]) => {
                     const lastMessage = msg ? `(${moment(msg.timestamp).fromNow()})` : '';
-                    
+
                     node.status(connected
                         ? { fill: 'green', shape: 'dot', text: `connected ${lastMessage}` }
                         : { fill: 'red', shape: 'ring', text: 'not connected' });
