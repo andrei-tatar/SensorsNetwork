@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InputSensor", "InputSensor\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IrBridge", "IrBridge\IrBridge.vcxproj", "{8B8A02C6-25F9-4E18-A392-DCA79E8A7FAD}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LightSwitch", "LightSwitch\LightSwitch.vcxproj", "{B410F463-5DBD-4807-91CE-3F34ABAB9744}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -39,6 +41,10 @@ Global
 		{8B8A02C6-25F9-4E18-A392-DCA79E8A7FAD}.Debug|x86.Build.0 = Debug|Win32
 		{8B8A02C6-25F9-4E18-A392-DCA79E8A7FAD}.Release|x86.ActiveCfg = Release|Win32
 		{8B8A02C6-25F9-4E18-A392-DCA79E8A7FAD}.Release|x86.Build.0 = Release|Win32
+		{B410F463-5DBD-4807-91CE-3F34ABAB9744}.Debug|x86.ActiveCfg = Debug|Win32
+		{B410F463-5DBD-4807-91CE-3F34ABAB9744}.Debug|x86.Build.0 = Debug|Win32
+		{B410F463-5DBD-4807-91CE-3F34ABAB9744}.Release|x86.ActiveCfg = Release|Win32
+		{B410F463-5DBD-4807-91CE-3F34ABAB9744}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
