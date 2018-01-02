@@ -1,0 +1,50 @@
+<script type="text/javascript">
+    RED.nodes.registerType('snode-lightswitch', {
+        category: 'snode',
+        color: '#e6a4a5',
+        defaults: {
+            bridge: { type: 'snode-bridge', required: true },
+            name: { value: 'Lightswitch' },
+            topic: { value: '' },
+            key: { value: '', required: true, validate: RED.validators.regex(/[a-f0-9]{32}/) },
+            manual: { value: true },
+            channels: { value: 1, required: true, validate: RED.validators.number() },
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "bridge-dash.png",
+        paletteLabel: 'lightswitch',
+        label: function () { return this.name || 'lightswitch'; }
+    });
+
+</script>
+
+<script type="text/x-red" data-template-name="snode-lightswitch">
+    <div class="form-row">
+        <label for="node-input-bridge"><i class="fa fa-table"></i> Bridge</label>
+        <input type="text" id="node-input-bridge">
+    </div>
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-topic"><i class="fa fa-commenting"></i> Topic</label>
+        <input type="text" id="node-input-topic">
+    </div>
+    <div class="form-row">
+        <label for="node-input-key"><i class="fa fa-key"></i> Key</label>
+        <input type="text" id="node-input-key" placeholder="16 bytes hex without spaces/0x">
+    </div>
+    <div class="form-row">
+        <label style="width:50%" for="node-input-manual"><i class="fa fa-arrow-right"></i> Allow manual control: </label>
+        <input type="checkbox" checked id="node-input-manual" style="display:inline-block; width:auto; vertical-align:top;">
+    </div>
+    <div class="form-row">
+        <label style="width:50%" for="node-input-channels"><i class="fa fa-arrow-right"></i> Channels: </label>
+        <input type="text" checked id="node-input-channels" style="display:inline-block; width:auto; vertical-align:top;">
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="snode-lightswitch">
+</script>
