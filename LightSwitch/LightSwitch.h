@@ -7,4 +7,5 @@ typedef struct {
     uint8_t pinRelayReset;
     uint8_t state;
     uint8_t touchState;
+    uint32_t lastChange;
 } Channel;

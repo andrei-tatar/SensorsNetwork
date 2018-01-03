@@ -4,7 +4,7 @@
 uint8_t key[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
 Sensor sensor(key, 9, 10);
 
-#define RELAY_DELAY         50
+#define RELAY_DELAY         10
 
 #define CMD_SET             1
 #define CMD_GET             2
@@ -27,7 +27,7 @@ void setup()
 {
     sensor.begin();
     sensor.onMessage(onData);
-    sensor.powerDown(5);
+    sensor.powerDown(2);
 
     for (uint8_t i = 0; i < CHANNELS; i++) {
         auto channel = &channels[i];
@@ -50,7 +50,8 @@ void loop()
         uint32_t now = millis();
 
         uint8_t touchState = digitalRead(channel->pinTouch);
-        if (touchState != channel->touchState) {
+        if (touchState != channel->touchState && now - channel->lastChange > 300) {
+            channel->lastChange = now;
             channel->touchState = touchState;
             if (touchState) {
                 if (mode & MODE_DISABLE_MAN) continue;
