@@ -2,9 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClInclude Include="__vm\.InputSensor.vsarduino.h" />
-    <ClInclude Include="Tcn.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <ClInclude Include="MAX44009.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="InputSensor.ino" />
@@ -18,8 +16,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Tcn.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ClCompile Include="MAX44009.cpp" />
   </ItemGroup>
 </Project>
