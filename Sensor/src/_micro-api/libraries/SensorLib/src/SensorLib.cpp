@@ -3,6 +3,7 @@
 const uint8_t iv[16];
 
 #define ADDRESS_GW      0xAD5AB7192FUL
+#define ADDRESS_NODE    0x164F19B4E6UL
 #define RADIO_CHANNEL   0x54
 #define RETRY_COUNT     10
 #define RETRY_DELAY     50
@@ -21,11 +22,12 @@ bool Sensor::begin() {
     if (!_radio.begin())
         return false;
 
+    _radio.setDataRate(RF24_250KBPS);
     _radio.setChannel(RADIO_CHANNEL);
     _radio.setAutoAck(false);
     _radio.enableDynamicPayloads();
     _radio.openWritingPipe(ADDRESS_GW);
-    _radio.openReadingPipe(1, _key);
+    _radio.openReadingPipe(1, ADDRESS_NODE);
     _radio.startListening();
     return true;
 }

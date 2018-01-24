@@ -3,6 +3,7 @@
 
 #define MAX_SENSORS     10
 #define ADDRESS_GW      0xAD5AB7192FUL
+#define ADDRESS_NODE    0x164F19B4E6UL
 #define RADIO_CHANNEL   0x54
 #define RETRY_COUNT     10
 #define RETRY_DELAY     50
@@ -175,7 +176,7 @@ void sendPacket(Sensor *sensor, const uint8_t *data, uint8_t length) {
     length = length + 3 <= 16 ? 16 : 32;
     aes128_cbc_enc(sensor->key, iv, msg, length);
 
-    radio.openWritingPipe(sensor->key);
+    radio.openWritingPipe(ADDRESS_NODE);
     radio.stopListening();
     radio.write(msg, length);
     radio.startListening();
@@ -207,6 +208,8 @@ void onSerialPacketReceived(uint8_t *data, uint8_t size) {
         sensorsCount = data[1];
         if (sensorsCount * 16 + 2 != size) break;
 
+        radio.setPALevel(RF24_PA_MAX);
+        radio.setDataRate(RF24_250KBPS);
         radio.setChannel(RADIO_CHANNEL);
         radio.setAutoAck(false);
         radio.enableDynamicPayloads();
