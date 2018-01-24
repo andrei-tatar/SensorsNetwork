@@ -11,7 +11,7 @@ import 'rxjs/add/operator/toPromise';
 import 'rxjs/add/operator/catch';
 import 'rxjs/add/operator/groupBy';
 import 'rxjs/add/operator/concatMap';
-import 'rxjs/add/operator/mergeAll';
+import 'rxjs/add/operator/mergeMap';
 
 class CommunicationError extends Error {
     constructor(message: string) {
@@ -65,7 +65,7 @@ export class Communication {
         this.txQueue = new Subject();
         this.txQueue
             .groupBy(m => m.id)
-            .map(group =>
+            .mergeMap(group =>
                 group.concatMap(msg => {
                     let subject = new BehaviorSubject(msg);
                     let oldReject = msg.reject;
@@ -75,7 +75,6 @@ export class Communication {
                     return subject;
                 })
             )
-            .mergeAll()
             .subscribe(({ id, msg, resolve, reject }) => {
                 const data = new Buffer(msg.length + 2);
                 let offset = data.writeUInt8(Communication.Cmd_SendMsg, 0);
@@ -95,13 +94,12 @@ export class Communication {
             });
     }
 
-    private async sendPacketAndWaitFor(packet: Buffer, verifyReply: (packet: Buffer) => boolean, tries: number = 3, timeout: number = 600) {
+    private async sendPacketAndWaitFor(packet: Buffer, verifyReply: (packet: Buffer) => boolean, tries: number = 3, timeout: number = 700) {
         while (tries--) {
             try {
                 await this.below.send(packet);
                 await this.below.data
-                    .map(p => verifyReply(p))
-                    .filter(s => s)
+                    .filter(p => verifyReply(p))
                     .first()
                     .timeout(timeout)
                     .catch(err => {
@@ -121,7 +119,6 @@ export class Communication {
     private async send(id: number, msg: Buffer) {
         if (id < 0)
             throw new Error('invalid id');
-
 
         await new Promise((resolve, reject) => {
             this.txQueue.next({ id, msg, resolve, reject });
