@@ -1,4 +1,5 @@
 #include "SensorLib.h"
+#include <avr/wdt.h>
 
 uint8_t key[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
 Sensor sensor(key, 9, 10);
@@ -80,6 +81,7 @@ void setup() {
 
     uint8_t announce = RSP_INIT;
     sensor.send(&announce, 1);
+    wdt_enable(WDTO_2S);
 }
 
 ISR(TIMER1_COMPA_vect) {
@@ -241,6 +243,8 @@ bool handleTouchEvents() {
 }
 
 void loop() {
+    wdt_reset();
+
     auto now = millis();
 
     handleRamp(now);
